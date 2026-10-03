@@ -236,3 +236,18 @@ test('a basis review with its sections out of order is rejected', () => {
   const swapped = REVIEW.replace('## Findings', '## TEMP').replace('## Assumptions', '## Findings').replace('## TEMP', '## Assumptions');
   assert.match(check('basis/14.review.md', swapped).join('\n'), /order/);
 });
+
+test('headings inside a code fence do not count as review sections', () => {
+  const fenced = `---
+work_item: "#14"
+verdict: not-ready
+---
+
+~~~md
+## Findings
+## Assumptions
+## Questions for the owner
+~~~
+`;
+  assert.match(check('basis/14.review.md', fenced).join('\n'), /missing section/);
+});

@@ -27,10 +27,19 @@ const REVIEW_SECTIONS = ['## Findings', '## Assumptions', '## Questions for the 
 
 /** Errors for a basis review body whose required sections are missing or out of order. */
 function reviewSectionErrors(path) {
-  const headings = readFileSync(path, 'utf8')
-    .split('\n')
-    .filter((line) => line.startsWith('## '))
-    .map((line) => line.trim());
+  const body = readFileSync(path, 'utf8').replace(/^---\n[\s\S]*?\n---\n?/, '');
+  const headings = [];
+  let fence = null; // the opening marker of the code fence we are inside, such as ``` or ~~~~
+  for (const line of body.split('\n')) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
+    } else if (marker) {
+      fence = marker;
+    } else if (line.startsWith('## ')) {
+      headings.push(line.trim());
+    }
+  }
   const missing = REVIEW_SECTIONS.filter((section) => !headings.includes(section));
   if (missing.length > 0) return missing.map((section) => ({ message: `missing section "${section}"` }));
   const positions = REVIEW_SECTIONS.map((section) => headings.indexOf(section));
