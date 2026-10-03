@@ -129,11 +129,11 @@ Your criteria: fast, easy to configure in CI, no cost. CT-MAT 5.3 adds technical
 | Setup in CI | One install command, runs against a built app | Appium server plus one driver per platform | Native build and instrumentation changes inside the app |
 | Changes to the app under test | None | None | Yes |
 | Test format | Short YAML flows | TypeScript | JavaScript |
-| Speed and stability | Fast, waits built in | Slower start, needs explicit waits | Fastest, least flaky once set up |
+| Speed and stability, measured | 74 s for three flows, 0 of 30 flaky | 36 s for the same flows, 0 of 30 flaky | Not measured |
 | Real devices | Android yes, iOS simulators only | Both | Limited |
 | Cost | Free CLI | Free | Free |
 
-**Recommendation: Maestro as the default.** It is the quickest to get green in CI, needs no change to the app (which matters, because the department never edits product code), and YAML flows are cheap for an agent to write and for a human to review. WebdriverIO with Appium is the second tool skill, for logic YAML cannot express and for real devices later. Detox is supported only where a team already has it. Phase 0 confirms this with a spike that measures setup time, run time, and flake rate on a free Linux runner.
+**Decision: Maestro as the default.** It was the easiest to set up (one install command, no server, no change to the app) and its YAML flows are the shortest for an agent to write and a person to review. It was not the fastest: WebdriverIO with Appium ran the same flows in about half the time, so it becomes a first-class second tool skill in phase 3 instead of a later addition. Detox is supported only where a team already has it. Full numbers are in [spikes/mobile-e2e.md](spikes/mobile-e2e.md).
 
 Cost note: on GitHub Actions, Linux runners with an Android emulator and macOS runners for iOS are free for public repos. Users with private repos pay for macOS minutes, so iOS runs are opt-in in the profile.
 
