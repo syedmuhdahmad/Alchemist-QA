@@ -68,8 +68,9 @@ skills/<name>/
   references/   one level deep, each linked directly from SKILL.md
   scripts/      executed, never read into context
   templates/    output shapes for medium-freedom skills
-  evals/        cases for this skill
 ```
+
+Eval cases for a skill live outside its folder, at `<plugin>/evals/<skill-name>/<case>/`, because that is where `claude plugin eval` looks.
 
 | Rule id | Rule |
 | --- | --- |
@@ -80,6 +81,7 @@ skills/<name>/
 | `reference-contents` | A reference over 100 lines starts with a `## Contents` list. |
 | `broken-link` | Every relative link in `SKILL.md` points at a file that exists. |
 | `scripts` | Every file in `scripts/` is executable. |
+| `evals` | A method, tool, or domain skill has at least three eval cases in `<plugin>/evals/<skill-name>/`. |
 
 Scripts are run, not read: only their output costs tokens. Hooks and skills call the same scripts, so what the instructions say and what orchestration checks cannot drift apart.
 
@@ -99,6 +101,21 @@ Rules a linter cannot check, which reviewers do:
 - **Do not state the obvious.** Write only our conventions and deviations. A skill is a procedure, never a syllabus summary.
 - **Dependencies are explicit.** A tool skill ships an `ensure-deps` script. Nothing assumes Java, an SDK, or an emulator exists.
 - **Cite, do not copy.** Name the syllabus and section a method follows. Use your own words.
+
+## Evals come first
+
+A skill is written test-first, like code:
+
+1. Write at least three eval cases: a prompt a user would type, and graders on the files the skill should produce.
+2. Run them before the skill exists and read what Claude does without it. That is the baseline, and it shows what the skill has to change.
+3. Write the smallest skill that fixes what the baseline got wrong.
+4. Run the cases again. The with-plugin score should pass and beat the no-plugin score.
+
+```bash
+claude plugin eval ./plugins/qa --case '<skill-name>-*' --scaffold --allow-tools Write --max-cost-usd 3
+```
+
+The runner needs the `claude` CLI logged in, and each run uses your Claude plan or API credit. Include one case where the right answer is "nothing to report", so a skill that over-reports is caught.
 
 ## Agents
 
