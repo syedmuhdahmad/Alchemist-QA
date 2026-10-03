@@ -213,8 +213,8 @@ Every skill declares its level. The level decides how it is written.
 
 | Freedom | Written as | Our skills |
 | --- | --- | --- |
-| High | Goals and boundaries in plain text | Basis review, risk analysis, failure triage, exploratory sessions, refactoring page and screen objects |
-| Medium | A template with allowed variations | Test cases, test plans, defect reports, completion reports, scaffolding a spec or a flow |
+| High | Goals and boundaries in plain text | Failure triage, exploratory sessions, refactoring page and screen objects |
+| Medium | A template with allowed variations | Basis reviews, risk registers, test cases, test plans, defect reports, completion reports, scaffolding a spec or a flow |
 | Low | Exact scripts, parameters fixed | Running suites, booting emulators, building the app, simulating interrupts and network, parsing results, updating `trace.json`, checking exit criteria, writing back to trackers |
 
 ### Folder rules
