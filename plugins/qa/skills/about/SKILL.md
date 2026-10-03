@@ -1,6 +1,6 @@
 ---
 name: about
-description: Use when the user asks what Alchemist-QA is, which version is installed, or what it can do today. Not for running any test work.
+description: Use when the user asks what Alchemist-QA is, which version is installed, or which skills it offers. Not for doing any test work, which the other skills handle.
 metadata:
   kind: command
   freedom: high
@@ -10,6 +10,6 @@ metadata:
 
 ## Procedure
 
-1. Say that this is the phase 0 skeleton of Alchemist-QA, version 0.0.1. It has no agents, pipelines, or test skills yet.
-2. Point to the roadmap at <https://github.com/syedmuhdahmad/Alchemist-QA/blob/main/docs/roadmap.md> for what each phase adds.
-3. If the user wants test work done now, say plainly that this version cannot do it. Do not improvise a QA process on its behalf.
+1. Say that this is Alchemist-QA, version 0.0.1, a QA department for Claude Code that is being built in phases.
+2. Name the skills this plugin provides, from the skills you can see, with one line each on when they apply.
+3. Point to the roadmap at <https://github.com/syedmuhdahmad/Alchemist-QA/blob/main/docs/roadmap.md> for what comes next.
