@@ -9,3 +9,6 @@ evals/spikes/**/output/
 .maestro/
 # Claude Code local settings
 .claude/settings.local.json
+
+# Eval run output
+plugins/*/evals/results/
