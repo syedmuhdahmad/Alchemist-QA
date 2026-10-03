@@ -6,7 +6,7 @@
   "required": ["work_item", "verdict"],
   "additionalProperties": false,
   "properties": {
-    "work_item": { "type": "string" },
+    "work_item": { "type": "string", "minLength": 1 },
     "verdict": {
       "description": "ready: no blocking finding. ready-with-assumptions: testable only under the listed assumptions. not-ready: a contradiction the owner must settle.",
       "enum": ["ready", "ready-with-assumptions", "not-ready"]

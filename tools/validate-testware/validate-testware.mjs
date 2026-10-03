@@ -22,6 +22,22 @@ function schemaFor(path) {
   return known[name] && `${known[name]}.schema.json`;
 }
 
+// A basis review's body must have these sections, in this order (docs/testware.md).
+const REVIEW_SECTIONS = ['## Findings', '## Assumptions', '## Questions for the owner'];
+
+/** Errors for a basis review body whose required sections are missing or out of order. */
+function reviewSectionErrors(path) {
+  const headings = readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((line) => line.startsWith('## '))
+    .map((line) => line.trim());
+  const missing = REVIEW_SECTIONS.filter((section) => !headings.includes(section));
+  if (missing.length > 0) return missing.map((section) => ({ message: `missing section "${section}"` }));
+  const positions = REVIEW_SECTIONS.map((section) => headings.indexOf(section));
+  const ordered = positions.every((position, index) => index === 0 || position > positions[index - 1]);
+  return ordered ? [] : [{ message: `sections must be in this order: ${REVIEW_SECTIONS.join(', ')}` }];
+}
+
 function load(path) {
   const text = readFileSync(path, 'utf8');
   if (!path.endsWith('.md')) return parse(text);
@@ -46,9 +62,11 @@ export function validateFile(path) {
   }
 
   const validate = ajv.getSchema(schema);
-  if (validate(data)) return [];
-  return validate.errors.map((error) => {
-    const detail = error.params.additionalProperty ?? error.params.propertyName ?? '';
-    return { message: `${error.instancePath || '/'} ${error.message}${detail ? ` (${detail})` : ''}` };
-  });
+  const errors = validate(data)
+    ? []
+    : validate.errors.map((error) => {
+        const detail = error.params.additionalProperty ?? error.params.propertyName ?? '';
+        return { message: `${error.instancePath || '/'} ${error.message}${detail ? ` (${detail})` : ''}` };
+      });
+  return schema === 'basis-review.schema.json' ? [...errors, ...reviewSectionErrors(path)] : errors;
 }

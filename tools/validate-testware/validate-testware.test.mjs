@@ -185,6 +185,20 @@ verdict: not-ready
 ---
 
 # Basis review: Reset a forgotten password
+
+## Findings
+
+| Id | Type | Where | Finding |
+| --- | --- | --- | --- |
+| F1 | contradiction | Criteria 2 and 3 | The link expires after 30 minutes but can be used for 24 hours. |
+
+## Assumptions
+
+None.
+
+## Questions for the owner
+
+1. F1: is the link valid for 30 minutes or 24 hours?
 `;
 
 test('a basis review with a known verdict is valid', () => {
@@ -204,4 +218,21 @@ test('a basis review with a verdict outside the known set is rejected', () => {
 test('a basis review that does not name its work item is rejected', () => {
   const errors = check('basis/14.review.md', REVIEW.replace('work_item: "#14"\n', ''));
   assert.match(errors.join('\n'), /work_item/);
+});
+
+test('a basis review with an empty work item is rejected', () => {
+  const errors = check('basis/14.review.md', REVIEW.replace('work_item: "#14"', 'work_item: ""'));
+  assert.match(errors.join('\n'), /work_item/);
+});
+
+for (const section of ['## Findings', '## Assumptions', '## Questions for the owner']) {
+  test(`a basis review without "${section}" is rejected`, () => {
+    const errors = check('basis/14.review.md', REVIEW.replace(`${section}\n`, ''));
+    assert.match(errors.join('\n'), new RegExp(section));
+  });
+}
+
+test('a basis review with its sections out of order is rejected', () => {
+  const swapped = REVIEW.replace('## Findings', '## TEMP').replace('## Assumptions', '## Findings').replace('## TEMP', '## Assumptions');
+  assert.match(check('basis/14.review.md', swapped).join('\n'), /order/);
 });
