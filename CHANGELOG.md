@@ -4,6 +4,10 @@ All notable changes to this project are recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Changed
+
+- Licence changed from Apache-2.0 to MIT. The ISTQB acknowledgement stays in `NOTICE`.
+
 ## [0.0.1] - 2026-10-03
 
 Phase 0: foundations. No agents or test skills yet.

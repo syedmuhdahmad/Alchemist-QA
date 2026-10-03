@@ -9,6 +9,6 @@
   },
   "homepage": "https://github.com/syedmuhdahmad/Alchemist-QA",
   "repository": "https://github.com/syedmuhdahmad/Alchemist-QA",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "keywords": ["qa", "testing", "istqb", "test-automation"]
 }

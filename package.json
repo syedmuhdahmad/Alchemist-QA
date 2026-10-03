@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "Repo tooling for Alchemist-QA. The plugins themselves live under plugins/.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22.18"

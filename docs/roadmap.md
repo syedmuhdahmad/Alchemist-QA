@@ -9,7 +9,7 @@ The goal is a new, separate open-source project: a set of Claude Code plugins th
 | Topic | Decision |
 | --- | --- |
 | Platform | Claude Code only |
-| Repo | New open-source repo, `Alchemist-QA`, licensed Apache-2.0. Everything written fresh. |
+| Repo | New open-source repo, `Alchemist-QA`, licensed MIT. Everything written fresh. |
 | First stack | React web, and bare React Native on iOS and Android, phones and tablets |
 | iOS | Android first on local emulators. iOS runs only on macOS CI runners. |
 | Test basis | Work items from Azure DevOps, Jira Cloud, or GitHub Issues |
@@ -325,7 +325,7 @@ tools/          lint-skills
 
 | Phase | Size | Contents | Done when |
 | --- | --- | --- | --- |
-| 0 Foundations | S | New `Alchemist-QA` repo with the Apache-2.0 licence and a NOTICE file carrying the ISTQB acknowledgement. `docs/authoring.md` and the skill linter. Verify Claude Code features against current docs. Schemas for routing, pipelines, profile, basis, trace. Benchmark apps with 10 seeded defects each. Mobile tool spike on Android. | A lint-clean empty plugin installs from the marketplace; benchmark apps run on Linux; the spike has numbers |
+| 0 Foundations | S | New `Alchemist-QA` repo with the MIT licence and a NOTICE file carrying the ISTQB acknowledgement. `docs/authoring.md` and the skill linter. Verify Claude Code features against current docs. Schemas for routing, pipelines, profile, basis, trace. Benchmark apps with 10 seeded defects each. Mobile tool spike on Android. | A lint-clean empty plugin installs from the marketplace; benchmark apps run on Linux; the spike has numbers |
 | 1 Method and staff | L | Twelve CTFL skills, six agents, testware contract, `/qa:onboard`, unit and component tool skills for web and mobile, GitHub Issues intake | One issue goes to a report with a full trace at unit level |
 | 2 Orchestration and scorecard | M | Hooks, pipeline engine, exit-criteria scripts, routing manifest and tests, seeded-defect and mutation scoring | `feature` pipeline finishes unattended (L1); routing at 95%; scorecard published |
 | 3 Automation engineering | L | CTAL-TAE skills, Playwright, Maestro on Android, device scripts, device portfolio with tablets, `qa-api`, flaky handling, regression selection | E2E tests on web and Android find their seeded defects |
@@ -362,7 +362,7 @@ tools/          lint-skills
 | Question | Answer |
 | --- | --- |
 | Project and repo name | Alchemist-QA |
-| Licence | Apache-2.0 |
+| Licence | MIT (changed from Apache-2.0 on 2026-10-03, before any outside contribution) |
 | Jira | Jira Cloud for now. Data Center is left to a community adapter. |
 | Cost ceiling for autonomous pull-request review | Not needed yet. Human review only for now; see section 12. |
 

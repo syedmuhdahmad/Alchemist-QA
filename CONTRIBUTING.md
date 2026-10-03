@@ -38,4 +38,4 @@ npm run check
 
 ## Licence
 
-By contributing you agree that your contribution is licensed under [Apache-2.0](LICENSE).
+By contributing you agree that your contribution is licensed under the [MIT licence](LICENSE).

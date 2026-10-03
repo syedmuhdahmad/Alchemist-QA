@@ -59,6 +59,6 @@ npm run check
 
 ## Licence and acknowledgement
 
-[Apache-2.0](LICENSE). See [NOTICE](NOTICE).
+[MIT](LICENSE). The ISTQB acknowledgement and trademark notice are in [NOTICE](NOTICE); please keep that file with any copy or fork.
 
 The test methods follow the structure of syllabi published by the International Software Testing Qualifications Board (ISTQB), the source and copyright owner of those syllabi. Skills cite the section they follow and are written in this project's own words. ISTQB is a registered trademark of the International Software Testing Qualifications Board. Alchemist-QA is not affiliated with or endorsed by ISTQB and certifies nothing.
