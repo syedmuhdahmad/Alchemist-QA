@@ -17,7 +17,7 @@ Check one work item for testability and record the result in a file that the nex
 
 ## Output
 
-`qa/basis/<id>.review.md`, filled in from [the template](templates/review.md). Write it in every case, including when nothing is wrong. The file is the result; the chat reply only points to it.
+`qa/basis/<id>.review.md`, filled in from [the template](templates/review.md). Write it in every case, including when nothing is wrong. The file is the result. The chat reply is a short summary of it: the file path, the verdict, and one line for each finding that is not a note.
 
 ## Procedure
 
