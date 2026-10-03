@@ -6,6 +6,7 @@ All notable changes to this project are recorded here. The format follows [Keep 
 
 ### Added
 
+- Testware contract (`docs/testware.md`): the `qa/` layout, who writes each file, identifiers, and the basis review format with its `basis-review.schema.json`.
 - `NOTICE` now credits the third-party files that came with the React Native template.
 
 ## [0.0.1] - 2026-10-03

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/basis/<id>.review.md frontmatter",
+  "description": "The result of reviewing one work item for testability. The verdict decides whether test design may start.",
+  "type": "object",
+  "required": ["work_item", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "work_item": { "type": "string", "minLength": 1 },
+    "verdict": {
+      "description": "ready: no blocking finding. ready-with-assumptions: testable only under the listed assumptions. not-ready: a contradiction the owner must settle.",
+      "enum": ["ready", "ready-with-assumptions", "not-ready"]
+    },
+    "reviewed_at": { "type": "string" }
+  }
+}

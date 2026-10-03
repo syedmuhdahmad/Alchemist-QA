@@ -16,16 +16,42 @@ for (const file of readdirSync(SCHEMA_DIR).filter((name) => name.endsWith('.sche
 function schemaFor(path) {
   const name = basename(path);
   if (name === 'trace.json') return 'trace.schema.json';
+  if (basename(dirname(path)) === 'basis' && name.endsWith('.review.md')) return 'basis-review.schema.json';
   if (basename(dirname(path)) === 'basis' && name.endsWith('.md')) return 'basis.schema.json';
   const known = { 'routing.yaml': 'routing', 'pipelines.yaml': 'pipelines', 'profile.yaml': 'profile' };
   return known[name] && `${known[name]}.schema.json`;
+}
+
+// A basis review's body must have these sections, in this order (docs/testware.md).
+const REVIEW_SECTIONS = ['## Findings', '## Assumptions', '## Questions for the owner'];
+
+/** Errors for a basis review body whose required sections are missing or out of order. */
+function reviewSectionErrors(path) {
+  const body = readFileSync(path, 'utf8').replace(/^---\n[\s\S]*?\n---\n?/, '');
+  const headings = [];
+  let fence = null; // the opening marker of the code fence we are inside, such as ``` or ~~~~
+  for (const line of body.split('\n')) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
+    } else if (marker) {
+      fence = marker;
+    } else if (line.startsWith('## ')) {
+      headings.push(line.trim());
+    }
+  }
+  const missing = REVIEW_SECTIONS.filter((section) => !headings.includes(section));
+  if (missing.length > 0) return missing.map((section) => ({ message: `missing section "${section}"` }));
+  const positions = REVIEW_SECTIONS.map((section) => headings.indexOf(section));
+  const ordered = positions.every((position, index) => index === 0 || position > positions[index - 1]);
+  return ordered ? [] : [{ message: `sections must be in this order: ${REVIEW_SECTIONS.join(', ')}` }];
 }
 
 function load(path) {
   const text = readFileSync(path, 'utf8');
   if (!path.endsWith('.md')) return parse(text);
   const match = text.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) throw new Error('basis file must start with YAML frontmatter');
+  if (!match) throw new Error('file must start with YAML frontmatter');
   return parse(match[1]);
 }
 
@@ -45,9 +71,11 @@ export function validateFile(path) {
   }
 
   const validate = ajv.getSchema(schema);
-  if (validate(data)) return [];
-  return validate.errors.map((error) => {
-    const detail = error.params.additionalProperty ?? error.params.propertyName ?? '';
-    return { message: `${error.instancePath || '/'} ${error.message}${detail ? ` (${detail})` : ''}` };
-  });
+  const errors = validate(data)
+    ? []
+    : validate.errors.map((error) => {
+        const detail = error.params.additionalProperty ?? error.params.propertyName ?? '';
+        return { message: `${error.instancePath || '/'} ${error.message}${detail ? ` (${detail})` : ''}` };
+      });
+  return schema === 'basis-review.schema.json' ? [...errors, ...reviewSectionErrors(path)] : errors;
 }
