@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/trace.json",
+  "description": "Traceability from work item to risk to test case to test to result (CTFL 1.4.4).",
+  "type": "object",
+  "required": ["items"],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["work_item", "risks", "cases"],
+        "additionalProperties": false,
+        "properties": {
+          "work_item": { "type": "string" },
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "level"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string" },
+                "level": { "enum": ["low", "medium", "high"] }
+              }
+            }
+          },
+          "cases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "technique", "tests"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string" },
+                "technique": { "type": "string" },
+                "risk": { "type": "string" },
+                "not_automated": { "description": "Why this case has no test.", "type": "string" },
+                "tests": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["path", "result"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "path": { "type": "string" },
+                      "result": { "enum": ["passed", "failed", "blocked", "not-run"] },
+                      "defect": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

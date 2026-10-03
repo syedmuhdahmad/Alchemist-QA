@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "work_item": "#12",
+      "risks": [{ "id": "R-12-1", "level": "high" }],
+      "cases": [
+        {
+          "id": "TC-12-01",
+          "technique": "decision-table",
+          "risk": "R-12-1",
+          "tests": [{ "path": "test/unit/promo.test.ts", "result": "failed", "defect": "D-0003" }]
+        },
+        {
+          "id": "TC-12-02",
+          "technique": "equivalence-partitioning",
+          "risk": "R-12-1",
+          "not_automated": "Needs a tracker write-back that phase 0 does not have.",
+          "tests": []
+        }
+      ]
+    }
+  ]
+}

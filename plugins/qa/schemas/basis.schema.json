@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/basis/<id>.md frontmatter",
+  "description": "One work item, read from a tracker by an intake adapter. The test basis for everything downstream.",
+  "type": "object",
+  "required": ["id", "source", "type", "title", "acceptance_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "source": { "enum": ["github-issues", "azure-devops", "jira-cloud"] },
+    "type": { "enum": ["story", "bug", "task", "epic"] },
+    "title": { "type": "string", "minLength": 1 },
+    "url": { "type": "string" },
+    "acceptance_criteria": {
+      "description": "Required even when empty: an empty list is a finding for the basis review, a missing key is an adapter bug.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links": { "type": "array", "items": { "type": "string" } },
+    "fetched_at": { "type": "string" }
+  }
+}

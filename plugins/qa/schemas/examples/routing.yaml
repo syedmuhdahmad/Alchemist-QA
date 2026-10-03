@@ -1,0 +1,22 @@
+# Example only. The real routing manifest ships in phase 2.
+routes:
+  - id: analysis.basis-review
+    activity: analysis
+    signals: ["review this story", "is this testable", "acceptance criteria"]
+    agent: test-analyst
+    method: test-basis-review
+    writes: ["qa/basis/**"]
+  - id: design.blackbox
+    activity: design
+    signals: ["test cases for", "boundary", "decision table", "edge cases"]
+    agent: test-analyst
+    method: test-design-blackbox
+    writes: ["qa/cases/**"]
+  - id: implementation.e2e-mobile
+    activity: implementation
+    level: system
+    signals: ["mobile e2e", "flow for the app"]
+    agent: automation-engineer
+    method: automation-architecture
+    capability: e2e-mobile
+    writes: ["test/e2e-mobile/**"]

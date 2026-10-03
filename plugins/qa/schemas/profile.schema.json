@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/profile.yaml",
+  "description": "What the department knows about one project: its stack, which tool fills each capability, where work items live, and how much it may do unattended.",
+  "type": "object",
+  "required": ["stack", "capabilities", "tracker", "autonomy", "environments"],
+  "additionalProperties": false,
+  "$defs": {
+    "capability": {
+      "enum": ["unit-web", "unit-mobile", "e2e-web", "e2e-mobile", "api", "load", "web-performance", "accessibility", "security", "visual"]
+    }
+  },
+  "properties": {
+    "stack": {
+      "type": "object",
+      "required": ["platforms"],
+      "additionalProperties": false,
+      "properties": {
+        "platforms": { "type": "array", "minItems": 1, "items": { "enum": ["web", "android", "ios"] } },
+        "source": { "type": "array", "items": { "type": "string" } },
+        "tests": { "type": "string" }
+      }
+    },
+    "capabilities": {
+      "description": "Capability to tool skill.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/capability" },
+      "additionalProperties": { "type": "string" }
+    },
+    "devices": {
+      "description": "Device portfolio (CT-MAT 1.1, 2.1.2).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "platform", "form"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "platform": { "enum": ["android", "ios"] },
+          "form": { "enum": ["phone", "tablet"] },
+          "os": { "type": "string" }
+        }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["github-issues", "azure-devops", "jira-cloud"] },
+        "project": { "type": "string" }
+      }
+    },
+    "autonomy": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+    "environments": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "allow"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string" },
+          "allow": {
+            "description": "Test types that may target this environment.",
+            "type": "array",
+            "items": { "enum": ["functional", "accessibility", "load", "security-passive", "security-active"] }
+          }
+        }
+      }
+    },
+    "domains": { "type": "array", "items": { "type": "string" } }
+  }
+}

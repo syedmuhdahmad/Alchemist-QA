@@ -1,0 +1,23 @@
+# Example: the benchmark project in evals/apps.
+stack:
+  platforms: [web, android, ios]
+  source: [src/, android/, ios/]
+  tests: test/
+capabilities:
+  unit-web: vitest
+  unit-mobile: jest
+  e2e-web: playwright
+  e2e-mobile: maestro
+  load: k6
+devices:
+  - { name: Pixel_7, platform: android, form: phone, os: "16" }
+  - { name: Pixel_Tablet, platform: android, form: tablet, os: "16" }
+tracker:
+  type: github-issues
+  project: syedmuhdahmad/Alchemist-QA
+autonomy: L1
+environments:
+  local:
+    url: http://localhost:3000
+    allow: [functional, accessibility, load, security-passive]
+domains: [ecommerce]

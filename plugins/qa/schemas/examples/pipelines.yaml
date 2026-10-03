@@ -1,0 +1,34 @@
+# Example only. The real pipelines ship in phase 2.
+pipelines:
+  feature:
+    stages:
+      - id: intake
+        agent: qa-lead
+        exit: ["qa/basis/{item}.md exists"]
+      - id: review
+        agent: test-analyst
+        method: test-basis-review
+        exit: ["qa/basis/{item}.review.md exists"]
+      - id: risk
+        agent: test-analyst
+        method: risk-analysis
+        exit: ["qa/risk-register.md has an entry for {item}"]
+      - id: design
+        agent: test-analyst
+        method: test-design-blackbox
+        exit: ["qa/cases/{item}.md exists", "every case names a technique"]
+      - id: automate
+        parallel: [web, mobile]
+        exit: ["every case in qa/trace.json has a test or a stated reason"]
+      - id: run
+        agent: failure-triager
+        method: failure-triage
+        exit: ["a run summary is recorded in qa/runs/", "every failure is classified"]
+      - id: review-testware
+        agent: test-reviewer
+        when: "risk >= medium"
+        exit: ["qa/reports/{item}.review.md exists"]
+      - id: report
+        agent: test-manager
+        method: test-reporting
+        exit: ["qa/reports/{item}.md exists"]
