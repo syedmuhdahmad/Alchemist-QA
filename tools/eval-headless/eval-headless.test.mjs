@@ -131,3 +131,11 @@ test('the CLI takes the value of --case as a filter, not as the target', () => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, new RegExp(`no cases found under ${empty}`));
 });
+
+test('an empty result keeps the last reply, so the judge never grades an empty message', () => {
+  const lines = [
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'A1 confirmed, A2 corrected.' }] } }),
+    JSON.stringify({ type: 'result', result: '', total_cost_usd: 0.3 }),
+  ];
+  assert.equal(parseStream(lines.join('\n')).lastMessage, 'A1 confirmed, A2 corrected.');
+});

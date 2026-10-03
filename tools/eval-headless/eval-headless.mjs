@@ -114,7 +114,7 @@ export function parseStream(output) {
     }
     if (event.type === 'result') {
       costUsd = event.total_cost_usd ?? 0;
-      lastMessage = event.result ?? lastMessage;
+      lastMessage = event.result || lastMessage;
     }
   }
   return { uses, lastMessage, costUsd };
