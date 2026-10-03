@@ -18,3 +18,18 @@ Testing 2018; Expert Level Test Management 2011; AI Testing v2.0.
 ISTQB is a registered trademark of the International Software Testing
 Qualifications Board. Alchemist-QA is not affiliated with, accredited by, or
 endorsed by ISTQB, and it does not certify anyone or anything.
+
+Third-party files
+-----------------
+The mobile benchmark app under evals/apps/mobile was generated from the React
+Native community template, which is distributed under the MIT License. It
+includes files from other projects, also under the Apache License, Version 2.0:
+
+  evals/apps/mobile/android/gradlew
+  evals/apps/mobile/android/gradlew.bat
+  evals/apps/mobile/android/gradle/wrapper/gradle-wrapper.jar
+      The Gradle wrapper. Copyright the original Gradle authors.
+  evals/apps/mobile/android/app/src/main/res/drawable/rn_edit_text_material.xml
+      Copyright (C) 2014 The Android Open Source Project.
+
+The text of the Apache License, Version 2.0 is in LICENSE.
