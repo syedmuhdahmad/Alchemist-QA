@@ -40,7 +40,7 @@ One section for the work item in `qa/risk-register.md`, filled in from [the temp
    | medium | Adds boundary values, decision tables, and failure paths | A reviewer samples the cases | Regression |
    | high | Adds state transitions and an exploratory session | A reviewer checks every case and the mutation score | Full, plus any non-functional check the risk names |
 
-7. Mark each risk that depends on an assumption from the review with "(rests on A<n>)".
+7. Mark each risk that depends on an assumption from the review with the assumption it rests on, such as "(rests on A2)".
 8. Number the risks `R-<item>-1`, `R-<item>-2`, and so on, where `<item>` is the work item id with only letters, digits, and hyphens. When the section already exists, continue after its highest number; never reuse one.
 9. Write the section, then reply with the file path and one line for each high risk.
 
