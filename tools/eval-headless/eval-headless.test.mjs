@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { grade, judgeVerdict, loadCase, parseStream } from './eval-headless.mjs';
+import { grade, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -138,4 +138,28 @@ test('an empty result keeps the last reply, so the judge never grades an empty m
     JSON.stringify({ type: 'result', result: '', total_cost_usd: 0.3 }),
   ];
   assert.equal(parseStream(lines.join('\n')).lastMessage, 'A1 confirmed, A2 corrected.');
+});
+
+test('the stream gives the session id, to find the transcript', () => {
+  const lines = [JSON.stringify({ type: 'system', subtype: 'init', session_id: 'abc-123' }), JSON.stringify({ type: 'result', result: 'ok' })];
+  assert.equal(parseStream(lines.join('\n')).sessionId, 'abc-123');
+});
+
+test('the final reply is the last main-thread text in the transcript, after background agents finished', () => {
+  const entry = (isSidechain, content) => JSON.stringify({ type: 'assistant', isSidechain, message: { content } });
+  const transcript = [
+    entry(false, [{ type: 'text', text: 'Started the lead.' }]),
+    entry(true, [{ type: 'text', text: 'A subagent talking to itself.' }]),
+    entry(false, [{ type: 'tool_use', name: 'Bash', input: {} }]),
+    JSON.stringify({ type: 'queue-operation', operation: 'remove' }),
+    entry(false, [{ type: 'thinking', thinking: '' }, { type: 'text', text: '#14 stopped at the gate.' }]),
+    entry(true, [{ type: 'text', text: 'Late subagent text.' }]),
+    '{"type":"assistant","message":{"content":[{"type":"te',
+  ].join('\n');
+  assert.equal(lastReply(transcript), '#14 stopped at the gate.');
+  assert.equal(lastReply(''), '');
+});
+
+test('the transcript lives under the projects folder named after the workspace path', () => {
+  assert.equal(transcriptPath('/tmp/eval-x.y', 'abc', '/home/me'), '/home/me/.claude/projects/-tmp-eval-x-y/abc.jsonl');
 });

@@ -5,6 +5,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
 
@@ -94,11 +95,12 @@ export function judgeVerdict(result) {
   return { passed: answer.startsWith('PASS'), why: answer.split('\n').pop().slice(0, 200) };
 }
 
-/** The tool calls, the final reply, and the cost, from `claude -p --output-format stream-json` output. */
+/** The tool calls, the final reply, the cost, and the session id, from `claude -p --output-format stream-json` output. */
 export function parseStream(output) {
   const uses = [];
   let lastMessage = '';
   let costUsd = 0;
+  let sessionId;
   for (const line of output.split('\n').filter((l) => l.startsWith('{'))) {
     let event;
     try {
@@ -106,6 +108,7 @@ export function parseStream(output) {
     } catch {
       continue; // A line cut off when the run was killed at its timeout.
     }
+    sessionId ??= event.session_id;
     if (event.type === 'assistant') {
       for (const block of event.message?.content ?? []) {
         if (block.type === 'tool_use') uses.push({ name: block.name, input: block.input });
@@ -117,7 +120,31 @@ export function parseStream(output) {
       lastMessage = event.result || lastMessage;
     }
   }
-  return { uses, lastMessage, costUsd };
+  return { uses, lastMessage, costUsd, ...(sessionId && { sessionId }) };
+}
+
+/** Where Claude Code keeps a session's transcript: a folder named after the working directory, `/` and `.` as `-`. */
+export const transcriptPath = (workspace, sessionId, home = homedir()) =>
+  join(home, '.claude', 'projects', workspace.replace(/[/.]/g, '-'), `${sessionId}.jsonl`);
+
+/**
+ * The last text the main agent wrote, from a session transcript. When the main agent waits on a background agent,
+ * its final reply comes in a later turn that `claude -p` does not print, so the stream alone can miss it.
+ */
+export function lastReply(transcript) {
+  let reply = '';
+  for (const line of transcript.split('\n')) {
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (entry.type !== 'assistant' || entry.isSidechain) continue;
+    const text = (entry.message?.content ?? []).filter((block) => block.type === 'text' && block.text.trim()).pop();
+    if (text) reply = text.text;
+  }
+  return reply;
 }
 
 /**
@@ -142,7 +169,9 @@ export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
     child.stdin.end(testCase.prompt);
     child.on('close', () => {
       clearTimeout(timer);
-      resolvePromise(parseStream(output));
+      const run = parseStream(output);
+      const transcript = run.sessionId && readIf(transcriptPath(workspace, run.sessionId));
+      resolvePromise({ ...run, lastMessage: (transcript && lastReply(transcript)) || run.lastMessage });
     });
   });
 }
