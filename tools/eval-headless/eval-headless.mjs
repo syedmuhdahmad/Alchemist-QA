@@ -136,6 +136,8 @@ export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
     const child = spawn('claude', args, { cwd: workspace, stdio: ['pipe', 'pipe', 'ignore'] });
     const timer = setTimeout(() => child.kill(), testCase.timeoutSeconds * 2 * 1000);
     let output = '';
+    // Decode as a stream, so a multibyte character split across two chunks stays whole.
+    child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk) => (output += chunk));
     child.stdin.end(testCase.prompt);
     child.on('close', () => {
