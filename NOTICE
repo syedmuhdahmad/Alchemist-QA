@@ -1,0 +1,20 @@
+Alchemist-QA
+Copyright 2026 Muhammad Ahmad and the Alchemist-QA contributors
+
+This product is licensed under the Apache License, Version 2.0.
+
+ISTQB acknowledgement
+---------------------
+The test methods in this project follow the structure of syllabi published by
+the International Software Testing Qualifications Board (ISTQB), which is the
+source and copyright owner of those syllabi. Skills cite the syllabus and
+section they follow. They are written in this project's own words and do not
+reproduce syllabus text. No syllabus is distributed with this project.
+
+Syllabi referenced: Certified Tester Foundation Level v4.0.1; Advanced Level
+Test Automation Engineering v2.0; Mobile Application Testing 2019; Performance
+Testing 2018; Expert Level Test Management 2011; AI Testing v2.0.
+
+ISTQB is a registered trademark of the International Software Testing
+Qualifications Board. Alchemist-QA is not affiliated with, accredited by, or
+endorsed by ISTQB, and it does not certify anyone or anything.

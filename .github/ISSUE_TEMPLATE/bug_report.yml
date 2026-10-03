@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in Alchemist-QA does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The prompt or command you ran, and the smallest project that shows it.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `claude --version` and the plugin version from `claude plugin list`.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: What were you testing
+      options: [Web, Android, iOS, Not applicable]
+    validations:
+      required: true

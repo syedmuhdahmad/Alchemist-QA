@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews every pull request. It is free for public repositories.
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/package-lock.json"
+    - "!evals/apps/mobile/android/**"
+    - "!evals/apps/mobile/ios/**"
+  path_instructions:
+    - path: "evals/apps/**"
+      instructions: |
+        These are benchmark apps with defects seeded on purpose. The defects are listed in
+        evals/answer-keys/*.yaml and proven present by evals/answer-keys/*.test.mjs.
+        Do not suggest fixing a seeded defect. Do flag any change that fixes, removes, or adds a
+        defect without updating the answer key, and any comment or name that would give a defect away.
+    - path: "plugins/**/skills/**"
+      instructions: |
+        Review against docs/authoring.md. A skill is a procedure, not a summary: it has a "Use when ... Not for ..."
+        description, a Procedure section, and no restating of things Claude already knows. A method skill must not
+        name a tool. A tool skill needs a Gotchas section. References are one level deep and linked from SKILL.md.
+        Flag text copied from an ISTQB syllabus; skills cite a section number and use their own words.
+    - path: "plugins/**/hooks/**"
+      instructions: |
+        Hooks orchestrate agents: they route, hand off, check exit criteria, and record state. Flag a hook that
+        exists only to block or restrict a tool; restriction belongs in agent tool lists and permission rules.
+        Flag any Stop or SubagentStop hook that can block without a bound on how many times it does so.
+    - path: "plugins/**/schemas/**"
+      instructions: |
+        A schema change is a contract change. Check that examples in plugins/qa/schemas/examples and the tests in
+        tools/validate-testware were updated with it.
+    - path: "tools/**"
+      instructions: |
+        Tooling is test-driven. Flag behaviour that has no test, and tests that assert on mocks instead of results.
+chat:
+  auto_reply: true

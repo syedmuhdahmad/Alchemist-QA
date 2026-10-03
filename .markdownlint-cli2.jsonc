@@ -1,0 +1,6 @@
+{
+  // Long lines are fine: prose is one line per paragraph and tables are wide.
+  "config": { "MD013": false, "MD033": { "allowed_elements": ["br"] } },
+  "globs": ["**/*.md"],
+  "ignores": ["**/node_modules/**", "evals/apps/mobile/**", "CHANGELOG.md", ".github/PULL_REQUEST_TEMPLATE.md"]
+}

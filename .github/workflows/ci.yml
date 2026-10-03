@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Tooling, skills, schemas, docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests, answer keys, and API tests
+        run: npm test
+      - name: Lint skills against docs/authoring.md
+        run: npm run lint:skills
+      - name: Validate example testware against the schemas
+        run: npm run lint:testware
+      - name: Lint Markdown
+        run: npm run lint:md
+      - name: Validate the marketplace and plugin manifests
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          npm run validate:plugins
+
+  web:
+    name: Benchmark web app builds
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: evals/apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: evals/apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run build

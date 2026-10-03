@@ -1,0 +1,24 @@
+{
+  "name": "alchemist-qa",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Repo tooling for Alchemist-QA. The plugins themselves live under plugins/.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"tools/**/*.test.mjs\" \"evals/answer-keys/*.test.mjs\" \"evals/apps/api/*.test.mjs\"",
+    "lint:skills": "node tools/lint-skills/cli.mjs plugins",
+    "lint:testware": "node tools/validate-testware/cli.mjs plugins/qa/schemas/examples",
+    "lint:md": "markdownlint-cli2",
+    "validate:plugins": "claude plugin validate . --strict && claude plugin validate ./plugins/qa --strict",
+    "check": "npm test && npm run lint:skills && npm run lint:testware && npm run lint:md"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "markdownlint-cli2": "^0.18.1",
+    "yaml": "^2.8.0"
+  }
+}

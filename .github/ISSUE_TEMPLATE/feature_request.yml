@@ -1,0 +1,28 @@
+name: Feature or skill request
+description: Propose a skill, a pack, or a change to how the department works.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The testing problem
+      description: What can a tester not do today? Describe the situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would add. For a skill, say whether it is a method, tool, or domain skill.
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: The syllabus section, standard, or tool documentation it would follow, if any.
+  - type: checkboxes
+    id: free
+    attributes:
+      label: Open source only
+      options:
+        - label: Any tool this needs is open source and free to run.
+          required: true

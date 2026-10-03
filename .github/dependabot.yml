@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      tooling:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+# The benchmark apps under evals/apps are pinned on purpose: an upgrade can change behaviour and
+# move the baseline that detection scores are measured against.
