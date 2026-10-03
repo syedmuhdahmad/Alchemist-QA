@@ -24,7 +24,7 @@ Decide why each test failed, so product defects are reported, test defects are f
 | `test-defect` | The test expects something the basis does not say, or it is wrong in itself: a wrong selector, wrong test data, a missing wait, a typo. |
 | `environment` | The failure comes from outside the product and the test: a server not running, a port in use, a missing dependency, no network, a full disk. |
 | `flaky` | The same test, on the same code, both passed and failed. |
-| `question` | The test's expectation comes from an assumption the owner has not confirmed (the case's Basis is `A<n>`), and the product does something else. Nobody knows yet who is right. |
+| `question` | The test's expectation comes from an assumption that is still `open` in the review (the case's Basis is `A<n>`), and the product does something else. Nobody knows yet who is right. |
 
 ## Boundaries
 
@@ -37,7 +37,7 @@ Decide why each test failed, so product defects are reported, test defects are f
 1. Read the run's results, and list each failed test with its case id, message, and stack.
 2. For each failure:
    - environment signs (connection refused, timeout before any assertion, module not found) point to `environment`; confirm by checking the service or dependency;
-   - otherwise find where the case's expected value comes from. From an acceptance criterion or a confirmed scenario: equal to the test's expectation means `product-defect`, different means `test-defect`. From an assumption in the review: `question`, because the product may be right and the assumption wrong;
+   - otherwise find where the case's expected value comes from. From an acceptance criterion or a confirmed scenario: equal to the test's expectation means `product-defect`, different means `test-defect`. From an assumption whose status in the review is `open`, or that has no status: `question`, because the product may be right and the assumption wrong. From an assumption the owner `confirmed` or `corrected`: treat it as a criterion;
    - when the code under test has not changed since an earlier run where the same test passed, or a single rerun passes, call it `flaky` and record both runs.
 3. Rerun a failure once at most to check for flakiness, and only when the class is not already clear.
 4. Fix each `test-defect` in the test, citing the basis line that proves it wrong, and rerun that test.

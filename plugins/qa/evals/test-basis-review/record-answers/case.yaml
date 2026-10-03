@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: test-basis-review-record-answers
+context:
+  scaffold_script: fixture.sh
