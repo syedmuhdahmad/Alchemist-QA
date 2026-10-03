@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { grade, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
+import { grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -162,4 +162,13 @@ test('the final reply is the last main-thread text in the transcript, after back
 
 test('the transcript lives under the projects folder named after the workspace path', () => {
   assert.equal(transcriptPath('/tmp/eval-x.y', 'abc', '/home/me'), '/home/me/.claude/projects/-tmp-eval-x-y/abc.jsonl');
+});
+
+test('the judge sees the work fenced off, and is told not to answer questions in it', () => {
+  const work = 'I need one answer from you: 30 minutes or 24 hours?';
+  const prompt = judgePrompt('PASS if it names the contradiction.', work);
+  assert.ok(prompt.includes(`<work>\n${work}\n</work>`));
+  assert.match(prompt, /do not answer/i);
+  assert.match(prompt, /PASS if it names the contradiction\./);
+  assert.equal(judgePrompt('c', 'x'.repeat(20000)).match(/x+/)[0].length, 12000);
 });
