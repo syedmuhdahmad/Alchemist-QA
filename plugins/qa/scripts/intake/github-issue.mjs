@@ -62,7 +62,16 @@ export function toBasis(issue, fetchedAt) {
 
 function main(argv) {
   const [number, ...rest] = argv;
-  const option = (name, fallback) => (rest.includes(name) ? rest[rest.indexOf(name) + 1] : fallback);
+  const option = (name, fallback) => {
+    const index = rest.indexOf(name);
+    if (index === -1) return fallback;
+    const value = rest[index + 1];
+    if (value === undefined || value.startsWith('--')) {
+      console.error(`${name} needs a value`);
+      process.exit(2);
+    }
+    return value;
+  };
   if (!/^\d+$/.test(number ?? '')) {
     console.error('usage: github-issue.mjs <issue-number> [--repo owner/name] [--out qa/basis]');
     process.exit(2);

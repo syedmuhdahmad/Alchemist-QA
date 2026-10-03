@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -88,4 +89,21 @@ test('the result validates against the basis schema', () => {
 
 test('the file is named after the issue number', () => {
   assert.equal(basisFileName(12), '12.md');
+});
+
+const SCRIPT = new URL('./github-issue.mjs', import.meta.url).pathname;
+const runScript = (...args) => spawnSync('node', [SCRIPT, ...args], { encoding: 'utf8' });
+
+for (const flag of ['--out', '--repo']) {
+  test(`${flag} with no value fails with a usage message before calling gh`, () => {
+    const result = runScript('12', flag);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, new RegExp(`${flag} needs a value`));
+  });
+}
+
+test('a flag in place of a value fails instead of being used as the value', () => {
+  const result = runScript('12', '--repo', '--out', 'qa/basis');
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /--repo needs a value/);
 });
