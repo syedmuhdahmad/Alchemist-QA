@@ -1,0 +1,14 @@
+# Seeded defects in evals/apps/mobile. Each is proven present by mobile.test.mjs.
+# level: the lowest test level that can reveal it. ct_mat: the CT-MAT 2019 section the defect exercises, where one applies.
+app: mobile
+defects:
+  - { id: M1, requirement: CART-2, level: component, technique: boundary-value, where: src/lib/cart.ts, summary: "The quantity can be decreased below 1, to zero and negative." }
+  - { id: M2, requirement: PRICE-3, level: component, technique: equivalence-partitioning, where: src/lib/pricing.ts, summary: "Promo codes are case-sensitive; save10 is refused." }
+  - { id: M3, requirement: PRICE-5, level: component, technique: decision-table, where: src/lib/pricing.ts, summary: "Tax is calculated on the subtotal before the discount." }
+  - { id: M4, requirement: CHK-7, level: system, technique: state-transition, ct_mat: "2.1.6", where: src/CheckoutScreen.tsx, summary: "Rotating the device clears the checkout form." }
+  - { id: M5, requirement: CAT-3, level: system, technique: error-guessing, ct_mat: "2.3", where: src/lib/catalogue.ts, summary: "When products cannot be loaded the spinner shows forever, with no message and no retry." }
+  - { id: M6, requirement: CART-4, level: system, technique: state-transition, ct_mat: "2.1.7", where: src/lib/lifecycle.ts, summary: "The cart is emptied when the app returns from the background." }
+  - { id: M7, requirement: MOB-1, level: system, technique: equivalence-partitioning, ct_mat: "2.2.2", where: src/lib/links.ts, summary: "A product deep link opens the product list instead of the product." }
+  - { id: M8, requirement: A11Y-1, level: system, technique: checklist, ct_mat: "3.1.8", where: src/ProductRow.tsx, summary: "The add-to-cart button has no accessible name." }
+  - { id: M9, requirement: CHK-3, level: component, technique: equivalence-partitioning, where: src/lib/validation.ts, summary: "Any five characters are accepted as a postcode, including letters." }
+  - { id: M10, requirement: MOB-2, level: system, technique: checklist, ct_mat: "2.1.2", where: src/lib/catalogue.ts, summary: "On a tablet's two-column grid, tapping a product below the first row opens a different product." }

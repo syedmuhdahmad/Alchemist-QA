@@ -1,0 +1,23 @@
+{
+  "name": "alchemy-shop-web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Benchmark web app for Alchemist-QA. It contains seeded defects on purpose. Do not fix them.",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3000"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  }
+}

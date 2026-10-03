@@ -1,0 +1,11 @@
+{
+  "name": "alchemy-shop-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "In-memory API for the Alchemy Shop benchmark apps. No seeded defects.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  }
+}

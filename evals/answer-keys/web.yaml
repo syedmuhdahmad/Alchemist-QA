@@ -1,0 +1,14 @@
+# Seeded defects in evals/apps/web. Each is proven present by web.test.mjs.
+# level: the lowest test level that can reveal it.
+app: web
+defects:
+  - { id: W1, requirement: CART-2, level: component, technique: boundary-value, where: src/lib/cart.ts, summary: "An eleventh unit can be added to a cart line; the limit is 10." }
+  - { id: W2, requirement: PRICE-4, level: component, technique: boundary-value, where: src/lib/pricing.ts, summary: "A subtotal of exactly 50.00 is charged shipping; free shipping starts above 50.00 instead of at it." }
+  - { id: W3, requirement: PRICE-2, level: component, technique: decision-table, where: src/lib/pricing.ts, summary: "SAVE10 discounts products that are on sale." }
+  - { id: W4, requirement: PRICE-6, level: component, technique: equivalence-partitioning, where: src/lib/pricing.ts, summary: "Money is rounded down instead of to the nearest cent." }
+  - { id: W5, requirement: CHK-2, level: component, technique: equivalence-partitioning, where: src/lib/validation.ts, summary: "An email address with no top-level domain is accepted." }
+  - { id: W6, requirement: CART-3, level: component, technique: state-transition, where: src/lib/cart.ts, summary: "Removing a line lowers the cart count by 1, not by the line's quantity." }
+  - { id: W7, requirement: CHK-4, level: system, technique: state-transition, where: src/lib/checkout.ts, summary: "The Place order button stays enabled while the order is being sent, so it can be sent twice." }
+  - { id: W8, requirement: A11Y-1, level: system, technique: checklist, where: src/QuantityInput.tsx, summary: "The quantity input has no accessible name." }
+  - { id: W9, requirement: CHK-6, level: system, technique: error-guessing, where: src/lib/checkout.ts, summary: "A rejected or failed order is shown as placed and the cart is emptied." }
+  - { id: W10, requirement: ACC-1, level: system, technique: decision-table, where: src/lib/session.ts, summary: "A signed-out shopper can open the order history page." }
