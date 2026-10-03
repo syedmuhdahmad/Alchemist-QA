@@ -11,7 +11,7 @@ qa/
   profile.yaml            the project: stack, capabilities, devices, tracker, autonomy
   gotchas.md              this team's own gotchas, added to the plugin's
   risk-register.md        product risks, one section per work item, plus the onboard draft
-  basis/<id>.md           one work item, as read from the tracker
+  basis/<id>.md           one work item, as read from the tracker, or brought in by intake-manual
   basis/<id>.review.md    the testability review of that work item
   basis/<id>.acceptance.md  Given/When/Then scenarios, proposed to the owner
   cases/<id>.md           test cases designed for that work item
@@ -34,8 +34,8 @@ qa/
 | File | Written by | Checked by | Schema |
 | --- | --- | --- | --- |
 | `profile.yaml` | `/qa:onboard`, then the team | `SessionStart` hook | `profile.schema.json` |
-| `basis/<id>.md` | Intake adapter | Analyst | `basis.schema.json` |
-| `basis/<id>.review.md` | Analyst (`test-basis-review`) | Lead | `basis-review.schema.json` |
+| `basis/<id>.md` | Intake adapter: `intake-github`, or `intake-manual` when no tracker holds the item | Analyst | `basis.schema.json` |
+| `basis/<id>.review.md` | Analyst (`test-basis-review`), which also records the owner's answers | Lead | `basis-review.schema.json` |
 | `basis/<id>.acceptance.md` | Analyst (`acceptance-criteria`) | The owner, who confirms it | `acceptance.schema.json` |
 | `risk-register.md` | Analyst (`risk-analysis`) | Reviewer | Read by the trace script |
 | `cases/<id>.md` | Analyst (`test-design-blackbox`, `test-design-whitebox`) | Reviewer | `cases.schema.json` and the case table check |
@@ -56,10 +56,10 @@ Each skill's template, in its `templates/` folder, is the authoritative shape of
 
 | Thing | Form | Example |
 | --- | --- | --- |
-| Work item | As the tracker writes it | `#12`, `AB#123`, `PROJ-45` |
-| File name for a work item | The id with only letters, digits, and hyphens | `12`, `AB-123`, `PROJ-45` |
+| Work item | As the tracker writes it, or `REQ-<n>` when no tracker holds it | `#12`, `AB#123`, `PROJ-45`, `REQ-1` |
+| File name for a work item | The id with only letters, digits, and hyphens | `12`, `AB-123`, `PROJ-45`, `REQ-1` |
 | Finding in a basis review | `F<n>`, unique within the review | `F2` |
-| Assumption in a basis review | `A<n>`, naming the finding it covers | `A1 (covers F1)` |
+| Assumption in a basis review | `A<n>`, naming the finding it covers and its status | `A1 (covers F1, open)` |
 | Risk | `R-<item>-<n>` | `R-12-1` |
 | Test case | `TC-<item>-<nn>` | `TC-12-01` |
 | Defect | `D-<nnnn>`, unique in the project | `D-0003` |
@@ -89,6 +89,16 @@ A finding has one of these types:
 
 The body has three sections, in this order: `## Findings` (a table of id, type, where, finding), `## Assumptions`, and `## Questions for the owner`. A section with nothing in it says "None."
 
+Each assumption carries the owner's answer so far. The trace script reads it:
+
+| Status | Written | Meaning |
+| --- | --- | --- |
+| `open` | `A1 (covers F1, open)` | Not answered. An assumption with no status is open too. |
+| `confirmed <date>` | `A1 (covers F1, confirmed 2026-10-04)` | The owner agreed. The assumption counts as basis. |
+| `corrected <date>` | `A2 (covers F2, corrected 2026-10-04)` | The owner gave another rule, which is now the assumption's text. The cases that cite it are updated. |
+
+Only the owner's words change a status: the analyst records them, and never decides one. A case whose Basis cites an open assumption is *provisional*: its result, pass or fail, cannot settle an exit criterion until the owner answers. The trace lists those assumptions under `awaiting_owner` and those cases under `provisional`.
+
 ## Test cases
 
 `cases/<id>.md` has `work_item` in its frontmatter, and an optional `not_automated` map from case id to the reason no automated test exists. Its body has one table with this exact header, which the trace script and the validator read:
@@ -113,7 +123,17 @@ A test is linked to a case when its title starts with the case id, such as `it('
 | --- | --- | --- |
 | `defects/D-<n>.md` | `id`, `title`, `work_item`, `cases`, `severity` (`critical`, `major`, `minor`, `trivial`), `status` (`draft`, `approved`, `filed`) | Only a person moves a report from `draft` to `approved`. Only approved reports are drafted as tracker issues. |
 | `plans/<id>.md` | `work_item`, `estimate_hours` | Exit criteria must be checkable from the trace or the defect files. |
-| `reports/<id>.md` | `work_item`, `kind` (`progress` or `completion`), and on a completion report `exit_criteria` (`met` or `not-met`) | Every number comes from the trace or the defect files. |
+| `reports/<id>.md` | `work_item`, `kind` (`progress` or `completion`), and on a completion report `exit_criteria` (`met`, `not-met`, or `awaiting-owner`); with `awaiting-owner`, `awaiting` lists the open assumptions | Every number comes from the trace or the defect files. A report without a plan is never `met`. |
+
+### The verdict
+
+A completion report judges each exit criterion on the cases that are not provisional, then sets its verdict in this order:
+
+1. `not-met` when any criterion is not met, including when no plan set the criteria before testing;
+2. `awaiting-owner` when results rest on open assumptions, listed in `awaiting`;
+3. `met` otherwise.
+
+So a failure classed `question` never makes a report `not-met` on its own. A real defect does, and the open questions are still listed under **Waiting on the owner**.
 
 ## Write-back
 

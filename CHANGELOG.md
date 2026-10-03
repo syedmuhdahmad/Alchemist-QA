@@ -18,15 +18,24 @@ Phase 1: method and staff.
 - Agent rules in `tools/lint-skills`.
 - Eval cases: three per skill, one per agent, and `evals/integration/` for cases that need more than one plugin, including the phase 1 exit check.
 - `NOTICE` now credits the third-party files that came with the React Native template.
+- `intake-manual`: brings a work item that no tracker holds, such as a risk from the register or a request typed in chat, into `qa/basis/REQ-<n>.md` with `source: manual` and where it came from. The id is never reused (#110).
+- A third report verdict, `awaiting-owner`, with the open assumptions it waits on in `awaiting` (#111).
+- Assumptions in a basis review carry the owner's answer: `open`, `confirmed <date>`, or `corrected <date>`. The analyst records the owner's words and updates the cases that cite a corrected assumption (#111).
+- The trace lists the open assumptions that cases rest on (`awaiting_owner`) and those cases (`provisional`).
 
 ### Changed
 
 - The benchmark apps now have Vitest and Testing Library (web) and React Native Testing Library (mobile) as dev dependencies, so the department can test them.
 - The GitHub intake script moved into the `intake-github` skill.
+- `test-reporting` judges the exit criteria without the provisional cases, then says `not-met`, `awaiting-owner`, or `met`, in that order. A failure classed `question` alone no longer makes a report `not-met`. A report without a plan is never `met` (#111, #115).
+- Failure triage classes a failure `question` only while its assumption is open.
+- `qa-lead` routes a risk or a typed request to `intake-manual`, always leaves a report on disk when it stops early, and sends the owner's answers to the analyst (#110, #111).
 
 ### Fixed
 
 - `qa-lead` starts specialists as plain subagents and waits for their results. With agent teams on, it used to name them, which started teammates whose results never reached it, so it watched files in shell loops instead (#109).
+- `qa-lead` has a plan step, after test design and before automation, so the exit criteria are set before any test runs (#115).
+- `tools/eval-headless` grades the agent's real final reply: it keeps the last reply when the result is empty, reads it from the session transcript when the agent waited on a background agent, and fences it off in the judge's prompt, so a reply that asks the owner a question is graded rather than answered.
 - `trace.mjs` no longer reports a case as passed when one of its tests failed. Within one run a case now takes the worst result of its tests; before, the last test in the file decided (#107).
 - `trace.mjs` skips the `## Product: first pass` draft that `/qa:onboard` writes, so its risks no longer show as risks without cases (#108).
 
