@@ -4,7 +4,7 @@ A QA company for [Claude Code](https://claude.com/claude-code). Give it a work i
 
 Its methods follow the ISTQB syllabi. Its tools are open source only. It never edits your product code.
 
-> **Status: phase 0.** The foundations are in place: the plugin skeleton, the authoring standard and its linter, the testware schemas, and the benchmark apps. There are no agents or test skills yet, so it cannot do test work today. See the [roadmap](docs/roadmap.md).
+> **Status: phase 0.** The foundations are in place: the plugin skeleton, the authoring standard and its linter, the testware schemas, and the benchmark apps. There are no agents or test skills yet, so it cannot do test work today. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
 
 ## Install
 

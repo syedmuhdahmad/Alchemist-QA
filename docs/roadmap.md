@@ -369,3 +369,5 @@ tools/          lint-skills
 ## Next step
 
 Phase 1: the CTFL method skills, the six core agents, the testware contract, and `/qa:onboard`.
+
+Each phase has a [milestone](https://github.com/syedmuhdahmad/Alchemist-QA/milestones) and an `epic` issue that lists its work. All of it is on the [project board](https://github.com/users/syedmuhdahmad/projects/2).
