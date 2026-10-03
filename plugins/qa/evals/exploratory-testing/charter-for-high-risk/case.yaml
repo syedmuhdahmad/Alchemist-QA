@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: exploratory-testing-charter-for-high-risk
+context:
+  scaffold_script: fixture.sh

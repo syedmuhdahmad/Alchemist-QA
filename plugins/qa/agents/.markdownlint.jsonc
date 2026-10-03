@@ -1,0 +1,7 @@
+{
+  // Agent files are system prompts after their frontmatter, so they start with prose, not a heading.
+  // This file replaces the root config for this folder, so it repeats the root rules.
+  "MD013": false,
+  "MD033": { "allowed_elements": ["br"] },
+  "MD041": false
+}

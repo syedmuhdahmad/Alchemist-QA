@@ -16,8 +16,12 @@ for (const file of readdirSync(SCHEMA_DIR).filter((name) => name.endsWith('.sche
 function schemaFor(path) {
   const name = basename(path);
   if (name === 'trace.json') return 'trace.schema.json';
-  if (basename(dirname(path)) === 'basis' && name.endsWith('.review.md')) return 'basis-review.schema.json';
-  if (basename(dirname(path)) === 'basis' && name.endsWith('.md')) return 'basis.schema.json';
+  const folder = basename(dirname(path));
+  if (folder === 'basis' && name.endsWith('.review.md')) return 'basis-review.schema.json';
+  if (folder === 'basis' && name.endsWith('.acceptance.md')) return 'acceptance.schema.json';
+  if (folder === 'basis' && name.endsWith('.md')) return 'basis.schema.json';
+  const byFolder = { cases: 'cases', defects: 'defect', reports: 'report', plans: 'plan' };
+  if (byFolder[folder] && name.endsWith('.md')) return `${byFolder[folder]}.schema.json`;
   const known = { 'routing.yaml': 'routing', 'pipelines.yaml': 'pipelines', 'profile.yaml': 'profile' };
   return known[name] && `${known[name]}.schema.json`;
 }
@@ -45,6 +49,39 @@ function reviewSectionErrors(path) {
   const positions = REVIEW_SECTIONS.map((section) => headings.indexOf(section));
   const ordered = positions.every((position, index) => index === 0 || position > positions[index - 1]);
   return ordered ? [] : [{ message: `sections must be in this order: ${REVIEW_SECTIONS.join(', ')}` }];
+}
+
+// Techniques a case may name (docs/testware.md). The trace and the reports group cases by them.
+export const TECHNIQUES = [
+  'equivalence-partitioning',
+  'boundary-value',
+  'decision-table',
+  'state-transition',
+  'statement',
+  'branch',
+  'error-guessing',
+  'checklist',
+  'exploratory',
+  'acceptance',
+];
+const CASE_HEADER = '| Id | Technique | Risk | Basis | Level | Input and steps | Expected result |';
+const CASE_ID = /^TC-[A-Za-z0-9-]+-[0-9]{2,}$/;
+
+/** Errors for a cases file whose case table is missing or has rows the trace could not read. */
+function caseTableErrors(path) {
+  const rows = readFileSync(path, 'utf8').split('\n');
+  const start = rows.findIndex((row) => row.trim() === CASE_HEADER);
+  if (start === -1) return [{ message: `missing the case table, whose header is: ${CASE_HEADER}` }];
+  const errors = [];
+  for (const row of rows.slice(start + 2)) {
+    if (!row.trim().startsWith('|')) break;
+    const [id, technique] = row.split('|').slice(1).map((cell) => cell.trim());
+    if (!CASE_ID.test(id)) errors.push({ message: `case id "${id}" does not follow TC-<item>-<nn>` });
+    if (!TECHNIQUES.includes(technique)) {
+      errors.push({ message: `case ${id}: technique "${technique}" is not one of ${TECHNIQUES.join(', ')}` });
+    }
+  }
+  return errors;
 }
 
 function load(path) {
@@ -77,5 +114,7 @@ export function validateFile(path) {
         const detail = error.params.additionalProperty ?? error.params.propertyName ?? '';
         return { message: `${error.instancePath || '/'} ${error.message}${detail ? ` (${detail})` : ''}` };
       });
-  return schema === 'basis-review.schema.json' ? [...errors, ...reviewSectionErrors(path)] : errors;
+  if (schema === 'basis-review.schema.json') return [...errors, ...reviewSectionErrors(path)];
+  if (schema === 'cases.schema.json') return [...errors, ...caseTableErrors(path)];
+  return errors;
 }

@@ -87,6 +87,8 @@ Eval cases for a skill live outside its folder, at `<plugin>/evals/<skill-name>/
 
 Scripts are run, not read: only their output costs tokens. Hooks and skills call the same scripts, so what the instructions say and what orchestration checks cannot drift apart.
 
+A skill runs its own scripts as `node "${CLAUDE_SKILL_DIR}/scripts/<name>"`, and another skill's scripts in the same plugin as `${CLAUDE_PLUGIN_ROOT}/skills/<skill>/scripts/<name>`. Claude Code fills both in when it loads the skill, including when the skill is preloaded into an agent. Plugin scripts have no npm dependencies; their tests live in the plugin's `tests/` folder, because every file in `scripts/` must be executable.
+
 ## Body
 
 | Rule id | Rule |
@@ -119,6 +121,12 @@ claude plugin eval ./plugins/qa --case '<skill-name>-*' --scaffold --allow-tools
 
 The runner needs the `claude` CLI logged in, and each run uses your Claude plan or API credit. Include one case where the right answer is "nothing to report", so a skill that over-reports is caught.
 
+Things the runner does that shape how cases are written:
+
+- A fixture runs in place, so it can find the repository from `${BASH_SOURCE[0]}` and copy a benchmark app. `HOME` is a temporary folder, so never use `~`.
+- File graders only see files the run created or changed. To check that a file was left alone, use a `tool_used` grader with `max: 0` on `Edit` and `Write` for that path.
+- A case that needs more than one plugin, such as an agent that loads a tool skill from `qa-web`, lives in `evals/integration/`. It lists the plugins in `case.yaml` and runs from the repository root: `claude plugin eval . --eval-dir evals/integration`. Those cases have no no-plugin baseline.
+
 ## Agents
 
 - One role per agent. Its `description` says when the lead should delegate to it.
@@ -128,6 +136,16 @@ The runner needs the `claude` CLI logged in, and each run uses your Claude plan 
 - No knowledge in agent files. Knowledge goes in skills, listed under `skills`.
 - Stateless: everything it needs is in the packet and on disk.
 - A plugin agent cannot set `hooks`, `mcpServers`, or `permissionMode`. Hooks go in the plugin's `hooks/hooks.json`.
+
+| Rule id | Rule |
+| --- | --- |
+| `agent-name`, `agent-description` | `name` equals the file name, and `description` says when to delegate. |
+| `agent-tools` | `tools` is listed, so the agent never inherits every tool. |
+| `agent-delegates` | Only `qa-lead` has the `Agent` tool. |
+| `agent-skills` | Every preloaded skill exists in the plugin. Tool skills from other plugins are loaded at run time, from the profile, not preloaded. |
+| `agent-ignored-field` | No `hooks`, `mcpServers`, or `permissionMode`. |
+| `agent-sections` | The body has `## Inputs`, `## Output`, `## Exit criteria`, and `## Return`. |
+| `agent-length` | The body is at most 60 lines. |
 
 ## How teams customise
 

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: exploratory-testing-debrief-notes
+context:
+  scaffold_script: fixture.sh
