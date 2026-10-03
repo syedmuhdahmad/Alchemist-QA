@@ -16,6 +16,7 @@ for (const file of readdirSync(SCHEMA_DIR).filter((name) => name.endsWith('.sche
 function schemaFor(path) {
   const name = basename(path);
   if (name === 'trace.json') return 'trace.schema.json';
+  if (basename(dirname(path)) === 'basis' && name.endsWith('.review.md')) return 'basis-review.schema.json';
   if (basename(dirname(path)) === 'basis' && name.endsWith('.md')) return 'basis.schema.json';
   const known = { 'routing.yaml': 'routing', 'pipelines.yaml': 'pipelines', 'profile.yaml': 'profile' };
   return known[name] && `${known[name]}.schema.json`;
@@ -25,7 +26,7 @@ function load(path) {
   const text = readFileSync(path, 'utf8');
   if (!path.endsWith('.md')) return parse(text);
   const match = text.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) throw new Error('basis file must start with YAML frontmatter');
+  if (!match) throw new Error('file must start with YAML frontmatter');
   return parse(match[1]);
 }
 

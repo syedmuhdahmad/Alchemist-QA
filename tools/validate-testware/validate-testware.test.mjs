@@ -178,3 +178,30 @@ test('a file the validator has no schema for is reported, not passed', () => {
 test('a file that is not valid YAML is reported', () => {
   assert.match(check('routing.yaml', 'routes: [\n').join('\n'), /parse/i);
 });
+
+const REVIEW = `---
+work_item: "#14"
+verdict: not-ready
+---
+
+# Basis review: Reset a forgotten password
+`;
+
+test('a basis review with a known verdict is valid', () => {
+  assert.deepEqual(check('basis/14.review.md', REVIEW), []);
+});
+
+test('a basis review is checked as a review, not as a work item', () => {
+  // A work item needs id, source, type, and title. A review has none of them and must still pass.
+  assert.doesNotMatch(check('basis/14.review.md', REVIEW).join('\n'), /source|title/);
+});
+
+test('a basis review with a verdict outside the known set is rejected', () => {
+  const errors = check('basis/14.review.md', REVIEW.replace('not-ready', 'looks fine'));
+  assert.match(errors.join('\n'), /verdict/);
+});
+
+test('a basis review that does not name its work item is rejected', () => {
+  const errors = check('basis/14.review.md', REVIEW.replace('work_item: "#14"\n', ''));
+  assert.match(errors.join('\n'), /work_item/);
+});
