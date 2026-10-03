@@ -32,6 +32,7 @@ Write the plan that says what will be tested, how deeply, in what order, and whe
    - every risk has at least one case, and every case has a test or a reason it is not automated;
    - every case for a high risk has passed;
    - no open defect of severity critical or major;
+   - no result rests on an assumption the owner has not confirmed (`awaiting_owner` in the trace coverage is empty). While one does, the verdict is `awaiting-owner`, not `not-met`;
    - any other share the team sets, such as the share of medium-risk cases passed.
 6. **Estimate.** Count the cases, or the conditions where there are no cases yet, by level, and multiply by an effort per case that you state. Add time for review, defect reports, and reruns, and show the working. Put the total, in hours, in `estimate_hours`.
 7. **Priority order.** List what is tested first: high risks first, then medium, then low. Within a level, put first whatever other work depends on.

@@ -17,6 +17,10 @@ pipelines:
         agent: test-analyst
         method: test-design-blackbox
         exit: ["qa/cases/{item}.md exists", "every case names a technique"]
+      - id: plan
+        agent: test-manager
+        method: test-planning
+        exit: ["qa/plans/{item}.md exists", "the plan has exit criteria"]
       - id: automate
         parallel: [web, mobile]
         exit: ["every case in qa/trace.json has a test or a stated reason"]

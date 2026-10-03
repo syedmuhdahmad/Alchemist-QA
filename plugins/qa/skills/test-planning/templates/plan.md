@@ -26,6 +26,7 @@ Platforms: <from the profile, such as web, Android phone, Android tablet>.
 ## Exit criteria
 
 - <a condition checkable from qa/trace.json or qa/defects/>
+- No result rests on an assumption the owner has not confirmed.
 
 ## Estimate
 
