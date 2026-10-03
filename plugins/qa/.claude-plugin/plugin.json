@@ -1,0 +1,14 @@
+{
+  "name": "qa",
+  "displayName": "Alchemist-QA",
+  "version": "0.0.1",
+  "description": "Core QA department: routing, method skills, and orchestration. Phase 0 ships the skeleton only.",
+  "author": {
+    "name": "Muhammad Ahmad",
+    "url": "https://github.com/syedmuhdahmad"
+  },
+  "homepage": "https://github.com/syedmuhdahmad/Alchemist-QA",
+  "repository": "https://github.com/syedmuhdahmad/Alchemist-QA",
+  "license": "Apache-2.0",
+  "keywords": ["qa", "testing", "istqb", "test-automation"]
+}

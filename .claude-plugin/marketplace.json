@@ -1,0 +1,17 @@
+{
+  "name": "alchemist-qa",
+  "description": "A QA company for Claude Code: test analysis, design, automation, and reporting, aligned with the ISTQB syllabi.",
+  "owner": {
+    "name": "Muhammad Ahmad",
+    "url": "https://github.com/syedmuhdahmad"
+  },
+  "plugins": [
+    {
+      "name": "qa",
+      "source": "./plugins/qa",
+      "description": "Core QA department: routing, method skills, and orchestration. Phase 0 ships the skeleton only.",
+      "category": "testing",
+      "tags": ["qa", "testing", "istqb"]
+    }
+  ]
+}
