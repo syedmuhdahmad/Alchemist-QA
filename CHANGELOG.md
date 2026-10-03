@@ -27,6 +27,8 @@ Phase 1: method and staff.
 ### Fixed
 
 - `qa-lead` starts specialists as plain subagents and waits for their results. With agent teams on, it used to name them, which started teammates whose results never reached it, so it watched files in shell loops instead (#109).
+- `trace.mjs` no longer reports a case as passed when one of its tests failed. Within one run a case now takes the worst result of its tests; before, the last test in the file decided (#107).
+- `trace.mjs` skips the `## Product: first pass` draft that `/qa:onboard` writes, so its risks no longer show as risks without cases (#108).
 
 ## [0.0.1] - 2026-10-03
 

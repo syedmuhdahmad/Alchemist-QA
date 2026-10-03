@@ -90,12 +90,17 @@ function tableRows(text) {
   return rows;
 }
 
-/** Risks per work item, from the `## <item>: <title>` sections of the register. */
+/** The heading `/qa:onboard` gives its draft of product risks: a starting point, not a work item. */
+const DRAFT_SECTION = /^Product: first pass\s*$/i;
+
+/** Risks per work item, from the `## <item>: <title>` sections of the register, except the onboard draft. */
 function readRisks(root) {
   const risks = new Map();
   const sections = read(join(root, 'qa/risk-register.md')).split(/^## /m).slice(1);
   for (const section of sections) {
-    const item = section.split('\n')[0].split(':')[0].trim();
+    const heading = section.split('\n')[0];
+    if (DRAFT_SECTION.test(heading)) continue;
+    const item = heading.split(':')[0].trim();
     const rows = tableRows(section).filter((row) => /^R-/.test(row[0]));
     risks.set(item, rows.map((row) => ({ id: row[0], level: row[4] })));
   }
@@ -129,22 +134,30 @@ function testsByCase(root) {
 
 const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
 
-/** Case id -> latest result, read from qa/runs/ oldest first so later runs win. */
+const SEVERITY = { passed: 0, 'not-run': 1, failed: 2 };
+
+/**
+ * Case id -> latest result, read from qa/runs/ oldest first so later runs win. Within one run a case takes the
+ * worst result of its tests, so one failing row of an `it.each` table fails the case whatever its position.
+ */
 function resultsByCase(root) {
   const results = new Map();
-  const record = (title, result) => {
-    for (const id of new Set(title.match(CASE_ID) ?? [])) results.set(id, result);
-  };
   for (const file of filesIn(join(root, 'qa/runs'), /\.(json|xml)$/)) {
+    const run = new Map();
+    const record = (title, result) => {
+      for (const id of new Set(title.match(CASE_ID) ?? [])) {
+        if (!run.has(id) || SEVERITY[result] > SEVERITY[run.get(id)]) run.set(id, result);
+      }
+    };
     const text = read(file);
     if (file.endsWith('.json')) {
-      let run;
+      let report;
       try {
-        run = JSON.parse(text);
+        report = JSON.parse(text);
       } catch {
         continue;
       }
-      for (const suite of run.testResults ?? []) {
+      for (const suite of report.testResults ?? []) {
         for (const assertion of suite.assertionResults ?? []) {
           record(assertion.fullName ?? assertion.title ?? '', STATUS[assertion.status] ?? 'not-run');
         }
@@ -156,6 +169,7 @@ function resultsByCase(root) {
         record(name, result);
       }
     }
+    for (const [id, result] of run) results.set(id, result);
   }
   return results;
 }

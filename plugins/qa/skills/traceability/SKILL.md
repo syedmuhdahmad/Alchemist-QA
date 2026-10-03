@@ -16,10 +16,10 @@ The trace is built by a script, never by hand, so every agent and every report s
 
 | Link | Comes from |
 | --- | --- |
-| Work item to risk | The work item's section of `qa/risk-register.md` |
+| Work item to risk | The work item's section of `qa/risk-register.md`; the `## Product: first pass` draft from `/qa:onboard` is not a work item and is skipped |
 | Risk to case | The Risk column of `qa/cases/<file>.md` |
 | Case to test | A test whose title starts with the case id, such as `TC-12-01 ships free at 50.00` |
-| Test to result | Result files in `qa/runs/`, oldest first, so the latest run wins |
+| Test to result | Result files in `qa/runs/`, oldest first, so the latest run wins. Within one run a case takes its worst test: one failing row of an `it.each` table fails the case |
 | Failed test to defect | The `cases` list of a report in `qa/defects/` |
 
 A case with no test needs its reason under `not_automated` in the cases file. Otherwise it is a gap.

@@ -109,6 +109,61 @@ test('the latest run decides each result, and a failed case picks up the defect 
   assert.deepEqual(second.tests, [{ path: 'src/promo.test.ts', result: 'passed' }]);
 });
 
+test('a case with several tests in one run takes the worst result, whatever the order (#107)', () => {
+  const root = project({
+    'qa/cases/12.md': CASES,
+    'src/promo.test.ts': TEST_FILE,
+    'qa/runs/2026-10-03T10-00-00-unit-web.json': jestRun('src/promo.test.ts', [
+      ['TC-12-01 does not discount sale lines (row 1)', 'passed'],
+      ['TC-12-01 does not discount sale lines (row 2)', 'failed'],
+      ['TC-12-01 does not discount sale lines (row 3)', 'passed'],
+      ['TC-12-02 ships free at exactly 50.00 (row 1)', 'passed'],
+      ['TC-12-02 ships free at exactly 50.00 (row 2)', 'skipped'],
+    ]),
+  });
+  const [first, second] = buildTrace(root).items[0].cases;
+  assert.equal(first.tests[0].result, 'failed');
+  assert.equal(second.tests[0].result, 'not-run');
+});
+
+test('a newer run that has the case replaces every result of an older run (#107)', () => {
+  const root = project({
+    'qa/cases/12.md': CASES,
+    'src/promo.test.ts': TEST_FILE,
+    'qa/runs/2026-10-03T10-00-00-unit-web.json': jestRun('src/promo.test.ts', [
+      ['TC-12-01 does not discount sale lines (row 1)', 'failed'],
+      ['TC-12-01 does not discount sale lines (row 2)', 'passed'],
+    ]),
+    'qa/runs/2026-10-03T11-00-00-unit-web.json': jestRun('src/promo.test.ts', [
+      ['TC-12-01 does not discount sale lines (row 1)', 'passed'],
+      ['TC-12-01 does not discount sale lines (row 2)', 'passed'],
+    ]),
+  });
+  assert.equal(buildTrace(root).items[0].cases[0].tests[0].result, 'passed');
+});
+
+test('JUnit XML: a failing row among passing rows of one case is a failure (#107)', () => {
+  const row = (name, body = '') => `<testcase classname="src/promo.test.ts" name="${name}">${body}</testcase>`;
+  const xml = `<testsuites><testsuite name="promo">${row('TC-12-01 row 1')}${row('TC-12-01 row 2', '<failure message="x"/>')}${row('TC-12-01 row 3')}</testsuite></testsuites>`;
+  const root = project({ 'qa/cases/12.md': CASES, 'src/promo.test.ts': TEST_FILE, 'qa/runs/2026-10-03-unit-web.xml': xml });
+  assert.equal(buildTrace(root).items[0].cases[0].tests[0].result, 'failed');
+});
+
+test('the draft section that /qa:onboard writes is not read as a work item (#108)', () => {
+  const draft = `## Product: first pass
+
+Draft from \`/qa:onboard\`.
+
+| Id | Risk | Likelihood | Impact | Level | Response |
+| --- | --- | --- | --- | --- | --- |
+| R-product-1 | Checkout fails. | medium | high | high | Partitions. |
+`;
+  const root = project({ 'qa/risk-register.md': REGISTER.replace('## #12', `${draft}\n## #12`), 'qa/cases/12.md': CASES });
+  const trace = buildTrace(root);
+  assert.deepEqual(trace.items.map((item) => item.work_item), ['#12']);
+  assert.deepEqual(coverage(trace).risks_without_cases, []);
+});
+
 test('JUnit XML results are read too', () => {
   const xml = `<testsuites><testsuite name="promo"><testcase classname="src/promo.test.ts" name="TC-12-01 does not discount sale lines"><failure message="x"/></testcase><testcase classname="src/promo.test.ts" name="TC-12-02 ships free at exactly 50.00"/></testsuite></testsuites>`;
   const root = project({ 'qa/cases/12.md': CASES, 'src/promo.test.ts': TEST_FILE, 'qa/runs/2026-10-03-unit-web.xml': xml });
