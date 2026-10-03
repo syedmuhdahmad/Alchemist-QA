@@ -1,6 +1,6 @@
 ---
 name: failure-triager
-description: Tester who triages failures. Use when a test run has failures that must be classed (product defect, test defect, environment, or flaky), test defects fixed, and defect reports drafted.
+description: Tester who triages failures. Use when a test run has failures that must be classed (product defect, test defect, environment, flaky, or a question for the owner), test defects fixed, and defect reports drafted.
 tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 skills:
   - failure-triage

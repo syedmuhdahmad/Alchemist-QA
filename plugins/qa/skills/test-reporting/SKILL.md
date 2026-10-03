@@ -21,7 +21,7 @@ Default exit criteria: every risk has a case; every case has a test or a reason 
 
 ## Output
 
-`qa/reports/<file>.md` in the shape of [the template](templates/report.md). `kind` is `progress` while testing continues, `completion` when testing has ended or someone asks whether it can end.
+`qa/reports/<file>.md` in the shape of [the template](templates/report.md), where `<file>` is the work item id with only letters, digits, and hyphens. Progress and completion reports use this same path: each report replaces the last, and version control keeps the history. `kind` is `progress` while testing continues, `completion` when testing has ended or someone asks whether it can end.
 
 ## Procedure
 

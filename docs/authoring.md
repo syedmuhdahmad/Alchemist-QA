@@ -125,6 +125,7 @@ Things the runner does that shape how cases are written:
 
 - A fixture runs in place, so it can find the repository from `${BASH_SOURCE[0]}` and copy a benchmark app. `HOME` is a temporary folder, so never use `~`.
 - File graders only see files the run created or changed. To check that a file was left alone, use a `tool_used` grader with `max: 0` on `Edit` and `Write` for that path.
+- Every shell command in a run goes through the eval sandbox, which nests a user namespace. Where the host forbids that (Ubuntu with `kernel.apparmor_restrict_unprivileged_userns=1`), every Bash call fails with `apply-seccomp: write /proc/self/setgroups`, and cases that need Bash score 0 in both arms. Those scores say nothing about the skill. Run such cases on a host that allows nested namespaces, such as a CI runner.
 - A case that needs more than one plugin, such as an agent that loads a tool skill from `qa-web`, lives in `evals/integration/`. It lists the plugins in `case.yaml` and runs from the repository root: `claude plugin eval . --eval-dir evals/integration`. Those cases have no no-plugin baseline.
 
 ## Agents

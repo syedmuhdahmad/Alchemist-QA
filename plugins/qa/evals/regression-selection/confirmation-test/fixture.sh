@@ -54,8 +54,14 @@ status: filed
 
 # D-0007: A four-digit postcode is accepted
 ITEM
+# The defect: an earlier change let four digits through.
+cat > src/validation.ts <<'ITEM'
+export const isPostcode = (value: string) => /^\d{4,5}$/.test(value);
+ITEM
 git -c user.name=dev -c user.email=dev@example.com add -A
-git -c user.name=dev -c user.email=dev@example.com commit -q -m "Add defect report"
-sed -i 's/\^\\d{5}\$/^\\d{5}$/' src/validation.ts
-echo '// Postcodes are exactly five digits.' >> src/validation.ts
+git -c user.name=dev -c user.email=dev@example.com commit -q -m "Accept postcodes; add defect report D-0007"
+# The change under review fixes it.
+cat > src/validation.ts <<'ITEM'
+export const isPostcode = (value: string) => /^\d{5}$/.test(value);
+ITEM
 git -c user.name=dev -c user.email=dev@example.com commit -q -am "Fix D-0007: reject short postcodes"
