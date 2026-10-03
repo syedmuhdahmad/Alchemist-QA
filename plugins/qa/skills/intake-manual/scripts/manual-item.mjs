@@ -117,7 +117,9 @@ export function fromRequest(requestText, { id, title, origin = 'request in chat'
     '',
     requestText.trim(),
   ].join('\n');
-  return basis({ id, type, title, origin, criteria: acceptanceCriteria(requestText), now, body });
+  // People typing in chat often write the label as a plain line; read it as the heading the parser looks for.
+  const labelled = requestText.replace(/^[ \t]*acceptance criteria[ \t]*:?[ \t]*$/gim, '## Acceptance criteria');
+  return basis({ id, type, title, origin, criteria: acceptanceCriteria(labelled), now, body });
 }
 
 const USAGE = [

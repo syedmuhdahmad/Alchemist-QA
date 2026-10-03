@@ -180,3 +180,12 @@ test('the result validates against the basis schema', () => {
   assert.deepEqual(validateFile(join(dir, 'REQ-1.md')), []);
   assert.deepEqual(validateFile(join(dir, 'REQ-2.md')), []);
 });
+
+test('in a typed request, a plain "Acceptance criteria:" line starts the criteria too', () => {
+  const typed = ['Check the sign-up.', '', 'Acceptance criteria:', '- A new address gets an email.', '- Only confirmed addresses are added.'].join('\n');
+  assert.deepEqual(frontmatter(fromRequest(typed, { id: 'REQ-1', title: 'Sign-up', now: NOW })).acceptance_criteria, [
+    'A new address gets an email.',
+    'Only confirmed addresses are added.',
+  ]);
+  assert.ok(body(fromRequest(typed, { id: 'REQ-1', title: 'Sign-up', now: NOW })).includes('Acceptance criteria:\n- A new'));
+});
