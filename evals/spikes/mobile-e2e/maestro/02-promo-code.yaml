@@ -1,0 +1,17 @@
+appId: com.alchemyshop
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "add-1"
+- tapOn:
+    id: "nav-cart"
+- tapOn:
+    id: "promo-code"
+- inputText: "SAVE10"
+- hideKeyboard
+- tapOn:
+    id: "apply-code"
+- assertVisible:
+    id: "discount"
+    text: "Discount: 2.45"

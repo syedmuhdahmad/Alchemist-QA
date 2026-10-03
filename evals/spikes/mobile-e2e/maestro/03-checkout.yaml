@@ -1,0 +1,27 @@
+appId: com.alchemyshop
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "add-4"
+- tapOn:
+    id: "add-4"
+- tapOn:
+    id: "nav-cart"
+- tapOn:
+    id: "go-to-checkout"
+- tapOn:
+    id: "field-name"
+- inputText: "Ada"
+- tapOn:
+    id: "field-email"
+- inputText: "ada@example.com"
+- tapOn:
+    id: "field-postcode"
+- inputText: "12345"
+- hideKeyboard
+- tapOn:
+    id: "place-order"
+- assertVisible:
+    id: "order-placed"
+    text: "Order placed: A-.*"

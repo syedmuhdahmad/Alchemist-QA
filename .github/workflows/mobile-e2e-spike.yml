@@ -1,0 +1,56 @@
+name: Mobile e2e spike
+
+# Manual only. It answers one question from phase 0: does Maestro run the benchmark app's flows
+# on a free Linux runner, and how long does it take? Phase 3 replaces it with the real workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maestro-android:
+    name: Maestro on an Android emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: evals/apps/mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install JavaScript dependencies
+        working-directory: evals/apps/mobile
+        run: npm ci
+
+      - name: Build the release APK
+        working-directory: evals/apps/mobile/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --console=plain
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Let the runner use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the flows on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          script: ./evals/spikes/mobile-e2e/ci-run.sh

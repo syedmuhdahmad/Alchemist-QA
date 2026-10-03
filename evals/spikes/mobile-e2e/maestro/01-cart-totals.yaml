@@ -1,0 +1,19 @@
+appId: com.alchemyshop
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "add-1"
+- tapOn:
+    id: "add-1"
+- tapOn:
+    id: "nav-cart"
+- assertVisible:
+    id: "quantity-1"
+    text: "2"
+- assertVisible:
+    id: "subtotal"
+    text: "Subtotal: 49.00"
+- assertVisible:
+    id: "shipping"
+    text: "Shipping: 4.99"
