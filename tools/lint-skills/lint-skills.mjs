@@ -34,10 +34,11 @@ function filesUnder(dir) {
 /** Number of eval case folders directly under `dir`: those holding a prompt.md or a case.yaml. */
 function evalCases(dir) {
   if (!existsSync(dir)) return 0;
+  const isFile = (path) => existsSync(path) && statSync(path).isFile();
   return readdirSync(dir, { withFileTypes: true }).filter(
     (entry) =>
       entry.isDirectory() &&
-      (existsSync(join(dir, entry.name, 'prompt.md')) || existsSync(join(dir, entry.name, 'case.yaml'))),
+      (isFile(join(dir, entry.name, 'prompt.md')) || isFile(join(dir, entry.name, 'case.yaml'))),
   ).length;
 }
 

@@ -206,14 +206,14 @@ test('a link to a file that does not exist is reported', () => {
 });
 
 /** A plugin tree: plugin/skills/sample with VALID, plus `cases` eval case folders for it. */
-function pluginWithEvals(cases, { skillText = VALID } = {}) {
+function pluginWithEvals(cases, { skillText = VALID, marker = 'prompt.md' } = {}) {
   const plugin = mkdtempSync(join(tmpdir(), 'lint-evals-'));
   const dir = join(plugin, 'skills', 'sample');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'SKILL.md'), skillText);
   for (const name of cases) {
     mkdirSync(join(plugin, 'evals', 'sample', name), { recursive: true });
-    writeFileSync(join(plugin, 'evals', 'sample', name, 'prompt.md'), 'Do it.\n');
+    writeFileSync(join(plugin, 'evals', 'sample', name, marker), 'Do it.\n');
   }
   return dir;
 }
@@ -235,4 +235,18 @@ test('a folder without prompt.md or case.yaml does not count as an eval case', (
 test('a command skill does not need eval cases', () => {
   const dir = pluginWithEvals([], { skillText: withFrontmatter(['kind: method', 'kind: command']) });
   assert.deepEqual(rules(dir), []);
+});
+
+test('three eval cases written as case.yaml pass', () => {
+  assert.deepEqual(rules(pluginWithEvals(['a', 'b', 'c'], { marker: 'case.yaml' })), []);
+});
+
+test('two eval cases written as case.yaml are not enough', () => {
+  assert.deepEqual(rules(pluginWithEvals(['a', 'b'], { marker: 'case.yaml' })), ['evals']);
+});
+
+test('a folder named prompt.md does not make an eval case', () => {
+  const dir = pluginWithEvals(['a', 'b']);
+  mkdirSync(join(dir, '..', '..', 'evals', 'sample', 'c', 'prompt.md'), { recursive: true });
+  assert.deepEqual(rules(dir), ['evals']);
 });
