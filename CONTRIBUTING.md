@@ -8,6 +8,27 @@ Thank you for helping. This page says how to get a change merged.
 - Read [docs/authoring.md](docs/authoring.md) before writing a skill or an agent. The linter enforces it.
 - Read the [roadmap](docs/roadmap.md) to see which phase a change belongs to.
 
+## How work is tracked
+
+| Where | What it holds |
+| --- | --- |
+| [Roadmap](docs/roadmap.md) | The plan: phases, design, and what each phase must prove |
+| [Milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones) | One per phase, with its exit criterion |
+| [Project board](https://github.com/users/syedmuhdahmad/projects/2) | Every issue; group by milestone to see a phase |
+| Issues labelled `epic` | One per phase, listing that phase's issues as a checklist |
+| [Releases](https://github.com/syedmuhdahmad/Alchemist-QA/releases) | A tag for each finished phase, with the changelog entry |
+
+Labels say what an issue is, where it lands, and how urgent it is:
+
+| Group | Labels |
+| --- | --- |
+| Kind | `epic`, `skill: method`, `skill: tool`, `skill: domain`, `agent`, `hook`, `pipeline`, `schema`, `eval`, `spike`, `ci`, `tooling`, `governance`, plus `bug`, `enhancement`, `documentation` |
+| Area | `area: core`, `area: intake`, `area: web`, `area: mobile`, `area: api`, `area: perf`, `area: security`, `area: a11y`, `area: visual`, `area: ai`, `area: management`, `area: domain` |
+| Priority | `priority: high` blocks the phase's exit criterion, `priority: medium` is needed for the phase, `priority: low` is nice to have |
+| State | `needs: syllabus`, `needs: decision`, `blocked` |
+
+To pick something up, comment on the issue so it can be assigned. Link the issue in your pull request with `Closes #123`; merging then ticks it off in its epic.
+
 ## Set up
 
 Needs Node 22.18 or later.
