@@ -61,4 +61,6 @@ npm run check
 
 [MIT](LICENSE). The ISTQB acknowledgement and trademark notice are in [NOTICE](NOTICE); please keep that file with any copy or fork.
 
+A few files in the mobile benchmark app come from other projects under Apache-2.0. `NOTICE` lists them, and the licence text is in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).
+
 The test methods follow the structure of syllabi published by the International Software Testing Qualifications Board (ISTQB), the source and copyright owner of those syllabi. Skills cite the section they follow and are written in this project's own words. ISTQB is a registered trademark of the International Software Testing Qualifications Board. Alchemist-QA is not affiliated with or endorsed by ISTQB and certifies nothing.
