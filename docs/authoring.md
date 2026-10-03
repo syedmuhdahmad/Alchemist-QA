@@ -56,9 +56,11 @@ Match how tightly a skill is written to how fragile the task is.
 
 | Freedom | Write it as | Use it for | Must ship |
 | --- | --- | --- | --- |
-| `high` | Goals and boundaries in plain text | Basis review, risk analysis, failure triage, exploratory sessions | Nothing extra |
-| `medium` | A template with allowed variations | Test cases, plans, defect reports, completion reports, scaffolding a spec | A file in `templates/` (rule `templates`) |
+| `high` | Goals and boundaries in plain text | Failure triage, exploratory sessions, refactoring page and screen objects | Nothing extra |
+| `medium` | A template with allowed variations | Basis reviews, risk registers, test cases, plans, defect reports, completion reports, scaffolding a spec | A file in `templates/` (rule `templates`) |
 | `low` | Exact scripts with fixed parameters | Running suites, booting emulators, parsing results, updating the trace, checking exit criteria | An executable file in `scripts/` (rule `scripts`) |
+
+Choose by the output, not by how much judgement the work takes. If a later stage or a check script reads the file a skill writes, the file has a fixed shape, so the skill is `medium` even when the analysis behind it is judgement.
 
 ## Folder
 
