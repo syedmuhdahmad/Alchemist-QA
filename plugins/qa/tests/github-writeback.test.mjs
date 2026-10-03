@@ -80,6 +80,23 @@ test('the comment leads with the verdict and carries the summary and the exit cr
   assert.doesNotMatch(comment, /## Results/);
 });
 
+test('an awaiting-owner report leads with the assumptions it waits on and carries that section', () => {
+  const waiting = [
+    '## Waiting on the owner',
+    '',
+    '| Assumption | Question | Cases | Results |',
+    '| --- | --- | --- | --- |',
+    '| A1 | Is free shipping judged after the discount? | TC-12-03 | passed 1 |',
+    '',
+    '## Risk remaining',
+  ].join('\n');
+  const report = REPORT.replace('exit_criteria: not-met', 'exit_criteria: awaiting-owner\nawaiting: [A1, A3]').replace('## Risk remaining', waiting);
+  const comment = draftComment(report, [], 'qa/reports/12.md');
+  assert.match(comment, /\*\*Test completion report for #12: waiting on the owner's answers \(A1, A3\)\.\*\*/);
+  assert.match(comment, /### Waiting on the owner\n\n\| Assumption \| Question \| Cases \| Results \|/);
+  assert.match(draftComment(REPORT.replace('not-met', 'met'), [], 'qa/reports/12.md'), /exit criteria met\.\*\*/);
+});
+
 test('a progress report says it is progress, with no verdict', () => {
   const progress = REPORT.replace('kind: completion', 'kind: progress').replace('exit_criteria: not-met\n', '');
   assert.match(draftComment(progress, [], 'qa/reports/12.md'), /\*\*Test progress report for #12\.\*\*/);

@@ -32,4 +32,4 @@ The checklist of the skill you followed is complete, and every number in a repor
 
 ## Return
 
-The paths written, the verdict (`met`, `not-met`, or `progress`), the unmet criteria, and the drafts waiting for a person. Five lines at most.
+The paths written, the verdict (`met`, `not-met`, `awaiting-owner`, or `progress`), the unmet criteria, the assumptions it waits on, and the drafts waiting for a person. Five lines at most.
