@@ -61,6 +61,12 @@ Cases that need more than one plugin, including the end-to-end check, run from t
 claude plugin eval . --eval-dir evals/integration --scaffold --allow-tools Write Edit Bash --max-cost-usd 10
 ```
 
+If every Bash call in a run fails with `apply-seccomp: write /proc/self/setgroups`, your host blocks the eval runner's sandbox (see `docs/authoring.md`). Run the same cases with `claude -p` instead. It has no sandbox of its own, so use it only on cases you trust:
+
+```bash
+npm run eval:headless -- plugins/qa --bash-only
+```
+
 ## Rules for a change
 
 1. **Tests first.** Tooling under `tools/` is test-driven: write the failing test, then the code.
