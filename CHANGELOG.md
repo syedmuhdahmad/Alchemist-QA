@@ -24,6 +24,10 @@ Phase 1: method and staff.
 - The benchmark apps now have Vitest and Testing Library (web) and React Native Testing Library (mobile) as dev dependencies, so the department can test them.
 - The GitHub intake script moved into the `intake-github` skill.
 
+### Fixed
+
+- `qa-lead` starts specialists as plain subagents and waits for their results. With agent teams on, it used to name them, which started teammates whose results never reached it, so it watched files in shell loops instead (#109).
+
 ## [0.0.1] - 2026-10-03
 
 Phase 0: foundations. No agents or test skills yet.
