@@ -10,7 +10,7 @@ Files with a schema are checked by `tools/validate-testware`. The schemas and on
 qa/
   profile.yaml            the project: stack, capabilities, devices, tracker, autonomy
   gotchas.md              this team's own gotchas, added to the plugin's
-  risk-register.md        product risks, one section per work item
+  risk-register.md        product risks, one section per work item, plus the onboard draft
   basis/<id>.md           one work item, as read from the tracker
   basis/<id>.review.md    the testability review of that work item
   basis/<id>.acceptance.md  Given/When/Then scenarios, proposed to the owner
@@ -105,7 +105,7 @@ White-box design adds a `## Coverage gaps` section after the table.
 
 ## How tests link to cases
 
-A test is linked to a case when its title starts with the case id, such as `it('TC-12-01 ships free at 50.00')`. Results are linked the same way: the trace script reads every result file in `runs/`, oldest first, so the latest run decides each case's result. A failed case points at the defect report whose `cases` list names it.
+A test is linked to a case when its title starts with the case id, such as `it('TC-12-01 ships free at 50.00')`. Results are linked the same way: the trace script reads every result file in `runs/`, oldest first, so the latest run decides each case's result. When several tests in one run carry the same case id, the case takes the worst of them: failed, then not run, then passed. The `## Product: first pass` section that `/qa:onboard` drafts in `risk-register.md` is not a work item, and the trace skips it. A failed case points at the defect report whose `cases` list names it.
 
 ## Defects, plans, and reports
 

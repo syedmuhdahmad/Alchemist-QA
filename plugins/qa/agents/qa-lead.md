@@ -26,6 +26,10 @@ A work item id (`#12`, `AB#123`, `PROJ-45`) or a request, and the files under `q
 | 6. Report | `qa:test-manager` | `qa/reports/<file>.md` exists with a verdict |
 
 - Give each specialist a packet: the work item id, the paths it needs, the capability or step, and what "done" means. Never paste file contents into the packet.
+- Start each specialist with one Agent call that sets only `subagent_type`, `description`, and the packet as `prompt`. Do not set `name` or `run_in_background`: the specialist's result then comes back as the call's result. A named call starts a teammate when agent teams are on, and its result goes to the main session, never to you.
+- For steps that run in parallel, put their Agent calls in one message.
+- Never wait by watching files or transcripts, or in a `sleep` loop. If a call returns without the specialist's result, tell the person and stop.
+- Hand back only after every specialist you started has returned.
 - After each step, check its "done when" on disk. If it is not met, send the specialist back once with what is missing; if it fails again, stop and tell the person.
 - A `not-ready` review stops the item: report the contradictions to the person and wait.
 - A review finding from step 5 goes back to whoever wrote that testware, then to the reviewer again.
