@@ -55,8 +55,26 @@ status: draft
 # D-0001: SAVE10 discounts products on sale
 ITEM
 echo '{"items":[]}' > qa/trace.json
-cat >> src/pricing.test.ts <<'ITEM'
-it('TC-12-05 charges shipping at 49.99', () => {});
+# All passed for real: tests that assert, a product that meets them, and no unexplained earlier failure.
+rm qa/runs/2026-10-03T10-00-00-unit-web.json
+cat > src/pricing.ts <<'ITEM'
+export type Line = { price: number; onSale: boolean; quantity: number };
+const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+export function totals(lines: Line[], code: string) {
+  const subtotal = round(lines.reduce((s, l) => s + l.price * l.quantity, 0));
+  const eligible = lines.filter((l) => !l.onSale).reduce((s, l) => s + l.price * l.quantity, 0);
+  const discount = code.trim().toUpperCase() === 'SAVE10' ? round(eligible * 0.1) : 0;
+  const after = round(subtotal - discount);
+  return { subtotal, discount, shipping: after >= 50 ? 0 : 4.99 };
+}
+ITEM
+cat > src/pricing.test.ts <<'ITEM'
+import { expect, it } from 'vitest';
+import { totals } from './pricing';
+it('TC-12-01 does not discount a sale line', () => { expect(totals([{ price: 20, onSale: true, quantity: 1 }], 'SAVE10').discount).toBe(0); });
+it('TC-12-02 takes 10% off a line not on sale', () => { expect(totals([{ price: 20, onSale: false, quantity: 1 }], 'SAVE10').discount).toBe(2); });
+it('TC-12-03 ships free at exactly 50.00', () => { expect(totals([{ price: 50, onSale: false, quantity: 1 }], '').shipping).toBe(0); });
+it('TC-12-05 charges shipping at 49.99', () => { expect(totals([{ price: 49.99, onSale: false, quantity: 1 }], '').shipping).toBe(4.99); });
 ITEM
 cat > qa/runs/2026-10-03T12-00-00-unit-web.json <<'ITEM'
 {"testResults":[{"name":"src/pricing.test.ts","assertionResults":[

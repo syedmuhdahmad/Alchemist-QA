@@ -14,7 +14,8 @@
     "lint:testware": "node tools/validate-testware/cli.mjs plugins/qa/schemas/examples",
     "lint:md": "markdownlint-cli2",
     "validate:plugins": "claude plugin validate . --strict && claude plugin validate ./plugins/qa --strict",
-    "check": "npm test && npm run lint:skills && npm run lint:testware && npm run lint:md"
+    "check": "npm test && npm run lint:skills && npm run lint:testware && npm run lint:md",
+    "eval:headless": "node tools/eval-headless/cli.mjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
