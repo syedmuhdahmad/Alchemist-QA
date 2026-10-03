@@ -4,6 +4,10 @@ All notable changes to this project are recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Added
+
+- `NOTICE` now credits the third-party files that came with the React Native template.
+
 ## [0.0.1] - 2026-10-03
 
 Phase 0: foundations. No agents or test skills yet.
