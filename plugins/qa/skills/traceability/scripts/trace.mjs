@@ -6,7 +6,8 @@
  *   trace.mjs coverage [--root <dir>] [--item <id>] [--strict] print the gaps; --strict exits 1 when there are any
  *
  * Sources: qa/risk-register.md, qa/cases/*.md, test files that name a case id (TC-<item>-<nn>) in a test title,
- * result files in qa/runs/ (Jest-format JSON or JUnit XML, oldest first), and qa/defects/*.md.
+ * result files in qa/runs/ (Jest-format JSON or JUnit XML, oldest first), qa/defects/*.md, and the assumptions
+ * in qa/basis/*.review.md with the owner's answers so far.
  * No npm dependencies: this runs in any project.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -184,12 +185,39 @@ function defectsByCase(root) {
   return byCase;
 }
 
+const ASSUMPTION_LINE = /^\s*- (A\d+)\b(?:\s*\(([^)]*)\))?/;
+const ASSUMPTION_ID = /\bA\d+\b/g;
+
+/**
+ * Work item -> its review's assumptions, as [{id, status}]. The status is the owner's answer recorded in the
+ * assumption's parenthesis: `(covers F1, confirmed 2026-10-04)`. An assumption with none is open.
+ */
+function assumptionsByItem(root) {
+  const byItem = new Map();
+  for (const file of filesIn(join(root, 'qa/basis'), /\.review\.md$/)) {
+    const text = read(file);
+    const item = parseFrontmatter(text).work_item;
+    if (!item) continue;
+    const section = text.split(/^## /m).find((part) => part.startsWith('Assumptions')) ?? '';
+    const assumptions = [];
+    for (const line of section.split('\n')) {
+      const match = line.match(ASSUMPTION_LINE);
+      if (!match) continue;
+      const status = match[2]?.match(/\b(open|confirmed|corrected)\b/)?.[1] ?? 'open';
+      assumptions.push({ id: match[1], status });
+    }
+    byItem.set(item, assumptions);
+  }
+  return byItem;
+}
+
 /** The trace for every work item that has a cases file or a register section. */
 export function buildTrace(root) {
   const risks = readRisks(root);
   const tests = testsByCase(root);
   const results = resultsByCase(root);
   const defects = defectsByCase(root);
+  const assumptions = assumptionsByItem(root);
   const items = new Map();
 
   for (const file of filesIn(join(root, 'qa/cases'), /\.md$/)) {
@@ -198,10 +226,12 @@ export function buildTrace(root) {
     const notAutomated = front.not_automated ?? {};
     const cases = tableRows(text)
       .filter((row) => /^TC-/.test(row[0]))
-      .map(([id, technique, riskCell]) => {
+      .map(([id, technique, riskCell, basisCell]) => {
         const entry = { id, technique };
         const risk = riskCell?.match(/R-[A-Za-z0-9-]+-\d+/)?.[0];
         if (risk) entry.risk = risk;
+        const restsOn = [...new Set(basisCell?.match(ASSUMPTION_ID) ?? [])];
+        if (restsOn.length > 0) entry.rests_on = restsOn;
         if (notAutomated[id]) entry.not_automated = notAutomated[id];
         entry.tests = (tests.get(id) ?? []).map((path) => {
           const test = { path, result: results.get(id) ?? 'not-run' };
@@ -210,7 +240,9 @@ export function buildTrace(root) {
         });
         return entry;
       });
-    items.set(front.work_item, { work_item: front.work_item, risks: risks.get(front.work_item) ?? [], cases });
+    const entry = { work_item: front.work_item, risks: risks.get(front.work_item) ?? [] };
+    if (assumptions.has(front.work_item)) entry.assumptions = assumptions.get(front.work_item);
+    items.set(front.work_item, { ...entry, cases });
   }
   for (const [item, itemRisks] of risks) {
     if (!items.has(item)) items.set(item, { work_item: item, risks: itemRisks, cases: [] });
@@ -218,14 +250,34 @@ export function buildTrace(root) {
   return { items: [...items.values()] };
 }
 
-/** Gaps in a trace, optionally for one work item. `complete` is true when nothing is missing, failed, or unrun. */
+const GAPS = ['risks_without_cases', 'cases_without_tests', 'failed', 'not_run'];
+
+/**
+ * Gaps in a trace, optionally for one work item. `complete` is true when nothing is missing, failed, or unrun.
+ * `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` those cases, whatever their
+ * result: until the owner answers, their results cannot settle anything. With several work items in scope, an
+ * assumption is named with its item, as `#12 A1`, since every review numbers its own.
+ */
 export function coverage(trace, item) {
   const items = trace.items.filter((entry) => !item || entry.work_item === item);
-  const report = { risks_without_cases: [], cases_without_tests: [], failed: [], not_run: [], passed: [] };
+  const report = {
+    risks_without_cases: [],
+    cases_without_tests: [],
+    failed: [],
+    not_run: [],
+    passed: [],
+    awaiting_owner: [],
+    provisional: [],
+  };
   for (const entry of items) {
     const covered = new Set(entry.cases.map((testCase) => testCase.risk));
     report.risks_without_cases.push(...entry.risks.filter((risk) => !covered.has(risk.id)).map((risk) => risk.id));
+    const status = new Map((entry.assumptions ?? []).map((assumption) => [assumption.id, assumption.status]));
+    const awaiting = new Set();
     for (const testCase of entry.cases) {
+      const open = (testCase.rests_on ?? []).filter((id) => (status.get(id) ?? 'open') === 'open');
+      if (open.length > 0) report.provisional.push(testCase.id);
+      for (const id of open) awaiting.add(id);
       if (testCase.tests.length === 0) {
         if (!testCase.not_automated) report.cases_without_tests.push(testCase.id);
         continue;
@@ -235,8 +287,10 @@ export function coverage(trace, item) {
       else if (results.includes('not-run') || results.includes('blocked')) report.not_run.push(testCase.id);
       else report.passed.push(testCase.id);
     }
+    const byNumber = [...awaiting].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+    report.awaiting_owner.push(...byNumber.map((id) => (items.length > 1 ? `${entry.work_item} ${id}` : id)));
   }
-  report.complete = Object.entries(report).every(([key, list]) => key === 'passed' || list.length === 0);
+  report.complete = GAPS.every((key) => report[key].length === 0);
   return report;
 }
 

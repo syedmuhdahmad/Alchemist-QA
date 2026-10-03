@@ -21,6 +21,7 @@ The trace is built by a script, never by hand, so every agent and every report s
 | Case to test | A test whose title starts with the case id, such as `TC-12-01 ships free at 50.00` |
 | Test to result | Result files in `qa/runs/`, oldest first, so the latest run wins. Within one run a case takes its worst test: one failing row of an `it.each` table fails the case |
 | Failed test to defect | The `cases` list of a report in `qa/defects/` |
+| Case to assumption | The `A<n>` ids in the Basis column of `qa/cases/<file>.md`, and the status of each in the Assumptions section of `qa/basis/<file>.review.md`: `open`, `confirmed <date>`, or `corrected <date>`. No status means `open` |
 
 A case with no test needs its reason under `not_automated` in the cases file. Otherwise it is a gap.
 
@@ -38,6 +39,8 @@ A case with no test needs its reason under `not_automated` in the cases file. Ot
    node "${CLAUDE_SKILL_DIR}/scripts/trace.mjs" coverage --item "#12"
    ```
 
-   It prints `risks_without_cases`, `cases_without_tests`, `failed`, `not_run`, `passed`, and `complete`. Add `--strict` to exit with status 1 when anything is missing, failed, or not run.
+   It prints `risks_without_cases`, `cases_without_tests`, `failed`, `not_run`, `passed`, `awaiting_owner`, `provisional`, and `complete`. Add `--strict` to exit with status 1 when anything is missing, failed, or not run.
+
+   `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` lists those cases, whether they passed or failed: until the owner confirms or corrects the assumption, their results settle nothing. Neither list changes `complete`.
 3. If a case you expected is missing from the trace, check its test title starts with the case id, then run `update` again. Never edit `qa/trace.json` by hand.
-4. Reply with the counts, and name each risk without a case and each case without a test.
+4. Reply with the counts. Name each risk without a case, each case without a test, and each assumption in `awaiting_owner`.
