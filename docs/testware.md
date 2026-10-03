@@ -97,7 +97,7 @@ Each assumption carries the owner's answer so far. The trace script reads it:
 | `confirmed <date>` | `A1 (covers F1, confirmed 2026-10-04)` | The owner agreed. The assumption counts as basis. |
 | `corrected <date>` | `A2 (covers F2, corrected 2026-10-04)` | The owner gave another rule, which is now the assumption's text. The cases that cite it are updated. |
 
-Only the owner's words change a status: the analyst records them, and never decides one. A case whose Basis cites an open assumption is *provisional*: its result, pass or fail, cannot settle an exit criterion until the owner answers. The trace lists those assumptions under `awaiting_owner` and those cases under `provisional`.
+Only the owner's words change a status: the analyst records them, and never decides one. A case that ran and whose Basis cites an open assumption is *provisional*: its result, pass or fail, cannot settle an exit criterion until the owner answers. A case with no test, or one that did not run, is still a gap. The trace lists those assumptions under `awaiting_owner` and those cases under `provisional`.
 
 ## Test cases
 

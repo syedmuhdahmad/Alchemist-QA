@@ -254,8 +254,8 @@ const GAPS = ['risks_without_cases', 'cases_without_tests', 'failed', 'not_run']
 
 /**
  * Gaps in a trace, optionally for one work item. `complete` is true when nothing is missing, failed, or unrun.
- * `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` those cases, whatever their
- * result: until the owner answers, their results cannot settle anything. With several work items in scope, an
+ * `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` those of the cases that ran,
+ * whether they passed or failed: until the owner answers, their results cannot settle anything. With several work items in scope, an
  * assumption is named with its item, as `#12 A1`, since every review numbers its own.
  */
 export function coverage(trace, item) {
@@ -276,16 +276,20 @@ export function coverage(trace, item) {
     const awaiting = new Set();
     for (const testCase of entry.cases) {
       const open = (testCase.rests_on ?? []).filter((id) => (status.get(id) ?? 'open') === 'open');
-      if (open.length > 0) report.provisional.push(testCase.id);
       for (const id of open) awaiting.add(id);
       if (testCase.tests.length === 0) {
         if (!testCase.not_automated) report.cases_without_tests.push(testCase.id);
         continue;
       }
       const results = testCase.tests.map((test) => test.result);
-      if (results.includes('failed')) report.failed.push(testCase.id);
-      else if (results.includes('not-run') || results.includes('blocked')) report.not_run.push(testCase.id);
-      else report.passed.push(testCase.id);
+      const outcome = results.includes('failed')
+        ? 'failed'
+        : results.includes('not-run') || results.includes('blocked')
+          ? 'not_run'
+          : 'passed';
+      report[outcome].push(testCase.id);
+      // Only a result can be provisional: a case with no test, or one that did not run, is a gap like any other.
+      if (open.length > 0 && outcome !== 'not_run') report.provisional.push(testCase.id);
     }
     const byNumber = [...awaiting].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
     report.awaiting_owner.push(...byNumber.map((id) => (items.length > 1 ? `${entry.work_item} ${id}` : id)));

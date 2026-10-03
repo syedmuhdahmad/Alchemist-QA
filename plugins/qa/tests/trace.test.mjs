@@ -378,3 +378,20 @@ test('across several work items, an awaiting assumption is named with its item, 
   assert.ok(report.awaiting_owner.includes('#14 A1'));
   assert.deepEqual(coverage(buildTrace(root), '#14').awaiting_owner, ['A1', 'A2', 'A4']);
 });
+
+test('a case that rests on an open assumption but has no test, or did not run, is a gap, not provisional', () => {
+  const tests = ASSUMED_TESTS.replace("it('TC-12-03 trimmed code', () => {});\n", '');
+  const run = ASSUMED_RUN.replace(',{"title":"TC-12-05 paid at 49.99","fullName":"TC-12-05 paid at 49.99","status":"passed"}', '');
+  const root = project({
+    'qa/risk-register.md': REGISTER,
+    'qa/cases/12.md': ASSUMED_CASES,
+    'src/promo.test.ts': tests,
+    'qa/runs/2026-10-04T10-00-00-unit-web.json': run,
+    'qa/basis/12.review.md': review('- A1 (covers F1, open): spaces are ignored.'),
+  });
+  const report = coverage(buildTrace(root));
+  assert.deepEqual(report.cases_without_tests, ['TC-12-03']);
+  assert.deepEqual(report.not_run, ['TC-12-05']);
+  assert.deepEqual(report.provisional, ['TC-12-02']);
+  assert.deepEqual(report.awaiting_owner, ['A1', 'A2', 'A4']);
+});

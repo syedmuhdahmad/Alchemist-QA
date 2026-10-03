@@ -41,6 +41,6 @@ A case with no test needs its reason under `not_automated` in the cases file. Ot
 
    It prints `risks_without_cases`, `cases_without_tests`, `failed`, `not_run`, `passed`, `awaiting_owner`, `provisional`, and `complete`. Add `--strict` to exit with status 1 when anything is missing, failed, or not run.
 
-   `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` lists those cases, whether they passed or failed: until the owner confirms or corrects the assumption, their results settle nothing. Neither list changes `complete`.
+   `awaiting_owner` lists the open assumptions that cases rest on, and `provisional` lists those of the cases that ran, whether they passed or failed: until the owner confirms or corrects the assumption, their results settle nothing. A case with no test, or one that did not run, is a gap as usual, never provisional. Neither list changes `complete`.
 3. If a case you expected is missing from the trace, check its test title starts with the case id, then run `update` again. Never edit `qa/trace.json` by hand.
 4. Reply with the counts. Name each risk without a case, each case without a test, and each assumption in `awaiting_owner`.

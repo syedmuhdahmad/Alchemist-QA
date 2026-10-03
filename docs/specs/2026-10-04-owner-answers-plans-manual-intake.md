@@ -72,7 +72,7 @@ It may have `created_at`. Its body says that no tracker item exists and keeps th
 - An item gets `assumptions: [{id, status}]` when it has a review. `status` is `open`, `confirmed`, or `corrected`, without the date.
 - `coverage` adds two lists:
   - `awaiting_owner`: the open assumptions that at least one case rests on, including ids the review does not define;
-  - `provisional`: the cases that rest on an open assumption.
+  - `provisional`: the cases that rest on an open assumption and ran, whether they passed or failed. A case with no test, or one that did not run, stays a gap.
 - Neither list changes `complete`, which stays about coverage, so `--strict` and the lead's step checks are unchanged.
 
 **Verdict.** `test-reporting` decides a completion report's verdict in this order:
