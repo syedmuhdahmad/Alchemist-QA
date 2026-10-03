@@ -9,7 +9,7 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --test \"tools/**/*.test.mjs\" \"evals/answer-keys/*.test.mjs\" \"evals/apps/api/*.test.mjs\"",
+    "test": "node --test \"tools/**/*.test.mjs\" \"plugins/**/*.test.mjs\" \"evals/answer-keys/*.test.mjs\" \"evals/apps/api/*.test.mjs\"",
     "lint:skills": "node tools/lint-skills/cli.mjs plugins",
     "lint:testware": "node tools/validate-testware/cli.mjs plugins/qa/schemas/examples",
     "lint:md": "markdownlint-cli2",
