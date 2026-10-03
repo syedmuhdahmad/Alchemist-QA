@@ -1,6 +1,6 @@
 ---
 name: about
-description: Use when the user asks what Alchemist-QA is, which version is installed, or which skills it offers. Not for doing any test work, which the other skills handle.
+description: Use when the user asks what Alchemist-QA is, which version is installed, or which skills it offers. Not for doing any test work.
 metadata:
   kind: command
   freedom: high
