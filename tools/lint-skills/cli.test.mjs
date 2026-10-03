@@ -22,13 +22,17 @@ metadata:
 1. Do it.
 `;
 
-/** A plugin tree with one skill at plugins/p/skills/demo. */
+/** A plugin tree with one skill at plugins/p/skills/demo and its three eval cases. */
 function tree(description) {
   const root = mkdtempSync(join(tmpdir(), 'lint-cli-'));
   const dir = join(root, 'plugins/p/skills/demo');
   mkdirSync(dir, { recursive: true });
   mkdirSync(join(root, 'plugins/p/node_modules/x/skills/ignored'), { recursive: true });
   writeFileSync(join(dir, 'SKILL.md'), skillText(description));
+  for (const name of ['a', 'b', 'c']) {
+    mkdirSync(join(root, 'plugins/p/evals/demo', name), { recursive: true });
+    writeFileSync(join(root, 'plugins/p/evals/demo', name, 'prompt.md'), 'Do it.\n');
+  }
   return root;
 }
 

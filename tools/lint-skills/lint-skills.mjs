@@ -9,6 +9,7 @@ const MAX_DESCRIPTION = 500;
 const MAX_LINES = 500;
 const TARGET_LINES = 200;
 const CONTENTS_AFTER_LINES = 100;
+const MIN_EVAL_CASES = 3;
 // Whole-word tool names a method skill must not mention.
 const TOOL_NAMES =
   /\b(playwright|vitest|jest|maestro|appium|webdriverio|detox|cypress|selenium|k6|lighthouse|stryker|axe-core|newman|postman|mailpit|semgrep|allure)\b/i;
@@ -28,6 +29,16 @@ function filesUnder(dir) {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => join(entry.parentPath, entry.name));
+}
+
+/** Number of eval case folders directly under `dir`: those holding a prompt.md or a case.yaml. */
+function evalCases(dir) {
+  if (!existsSync(dir)) return 0;
+  return readdirSync(dir, { withFileTypes: true }).filter(
+    (entry) =>
+      entry.isDirectory() &&
+      (existsSync(join(dir, entry.name, 'prompt.md')) || existsSync(join(dir, entry.name, 'case.yaml'))),
+  ).length;
 }
 
 function isExecutable(path) {
@@ -99,6 +110,14 @@ export function lintSkill(skillDir) {
     add('length', `SKILL.md is ${length} lines; the limit is ${MAX_LINES}`);
   } else if (length > TARGET_LINES) {
     add('length', `SKILL.md is ${length} lines; aim for ${TARGET_LINES} or fewer`, { level: 'warning' });
+  }
+
+  // Inside a plugin, eval cases live at <plugin>/evals/<skill>/<case>/, where `claude plugin eval` finds them.
+  if (basename(dirname(skillDir)) === 'skills' && KINDS.includes(metadata.kind) && metadata.kind !== 'command') {
+    const cases = evalCases(join(dirname(dirname(skillDir)), 'evals', folder));
+    if (cases < MIN_EVAL_CASES) {
+      add('evals', `found ${cases} eval case(s) in evals/${folder}/; at least ${MIN_EVAL_CASES} are required`);
+    }
   }
 
   const scripts = filesUnder(join(skillDir, 'scripts'));
