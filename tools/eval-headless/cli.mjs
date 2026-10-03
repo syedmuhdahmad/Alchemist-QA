@@ -19,7 +19,9 @@ import { grade, judgeWithHaiku, loadCase, runArm } from './eval-headless.mjs';
 
 const args = process.argv.slice(2);
 const values = (flag) => args.flatMap((arg, i) => (arg === flag ? [args[i + 1]] : []));
-const target = resolve(args.find((arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? '.');
+// Only these flags take a value; the target is the first other argument that is not a flag.
+const VALUED = new Set(['--case', '--jobs', '--budget']);
+const target = resolve(args.find((arg, i) => !arg.startsWith('--') && !VALUED.has(args[i - 1])) ?? '.');
 const isPlugin = existsSync(join(target, '.claude-plugin', 'plugin.json'));
 const evalDir = isPlugin ? join(target, 'evals') : target;
 const jobs = Number(values('--jobs')[0] ?? 4);

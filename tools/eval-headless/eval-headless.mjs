@@ -82,9 +82,42 @@ export async function grade(grader, run) {
 /** Asks a small model to judge text against an llm grader's criteria, as the eval runner does. */
 export async function judgeWithHaiku(criteria, text) {
   const question = `You are grading an AI agent's work.\n\nCRITERIA:\n${criteria}\n\nWORK:\n${text.slice(0, 12000)}\n\nAnswer with exactly PASS or FAIL on the first line, then one sentence why.`;
-  const result = spawnSync('claude', ['-p', '--model', 'haiku'], { input: question, encoding: 'utf8', timeout: 300_000 });
+  return judgeVerdict(spawnSync('claude', ['-p', '--model', 'haiku'], { input: question, encoding: 'utf8', timeout: 300_000 }));
+}
+
+/** A verdict from the judge's process result. A judge that failed to run is not a FAIL verdict. */
+export function judgeVerdict(result) {
+  if (result.error || result.status !== 0) {
+    return { passed: false, why: `judge failed: ${result.error?.message ?? `exit ${result.status}`}` };
+  }
   const answer = (result.stdout ?? '').trim();
   return { passed: answer.startsWith('PASS'), why: answer.split('\n').pop().slice(0, 200) };
+}
+
+/** The tool calls, the final reply, and the cost, from `claude -p --output-format stream-json` output. */
+export function parseStream(output) {
+  const uses = [];
+  let lastMessage = '';
+  let costUsd = 0;
+  for (const line of output.split('\n').filter((l) => l.startsWith('{'))) {
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue; // A line cut off when the run was killed at its timeout.
+    }
+    if (event.type === 'assistant') {
+      for (const block of event.message?.content ?? []) {
+        if (block.type === 'tool_use') uses.push({ name: block.name, input: block.input });
+        if (block.type === 'text') lastMessage = block.text;
+      }
+    }
+    if (event.type === 'result') {
+      costUsd = event.total_cost_usd ?? 0;
+      lastMessage = event.result ?? lastMessage;
+    }
+  }
+  return { uses, lastMessage, costUsd };
 }
 
 /**
@@ -107,23 +140,7 @@ export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
     child.stdin.end(testCase.prompt);
     child.on('close', () => {
       clearTimeout(timer);
-      const uses = [];
-      let lastMessage = '';
-      let costUsd = 0;
-      for (const line of output.split('\n').filter((l) => l.startsWith('{'))) {
-        const event = JSON.parse(line);
-        if (event.type === 'assistant') {
-          for (const block of event.message?.content ?? []) {
-            if (block.type === 'tool_use') uses.push({ name: block.name, input: block.input });
-            if (block.type === 'text') lastMessage = block.text;
-          }
-        }
-        if (event.type === 'result') {
-          costUsd = event.total_cost_usd ?? 0;
-          lastMessage = event.result ?? lastMessage;
-        }
-      }
-      resolvePromise({ uses, lastMessage, costUsd });
+      resolvePromise(parseStream(output));
     });
   });
 }
