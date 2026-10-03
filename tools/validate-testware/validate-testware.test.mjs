@@ -132,6 +132,37 @@ test('a basis file without frontmatter is rejected', () => {
   assert.match(check('basis/12.md', 'Just text.\n').join('\n'), /frontmatter/);
 });
 
+const MANUAL = `---
+id: "REQ-1"
+source: manual
+type: task
+title: Check risk R-product-1
+origin: "qa/risk-register.md R-product-1"
+acceptance_criteria: []
+created_at: "2026-10-04T10:00:00Z"
+---
+
+There is no tracker item.
+`;
+
+test('a manual basis file with an origin is valid', () => {
+  assert.deepEqual(check('basis/REQ-1.md', MANUAL), []);
+});
+
+test('a manual basis file needs an origin', () => {
+  const errors = check('basis/REQ-1.md', MANUAL.replace(/^origin: .*\n/m, ''));
+  assert.match(errors.join('\n'), /origin/);
+});
+
+test('a manual basis id is REQ-<n>', () => {
+  const errors = check('basis/R-product-1.md', MANUAL.replace('id: "REQ-1"', 'id: "R-product-1"'));
+  assert.match(errors.join('\n'), /\/id/);
+});
+
+test('a tracker basis file needs no origin', () => {
+  assert.deepEqual(check('basis/12.md', BASIS), []);
+});
+
 const TRACE = {
   items: [
     {
@@ -163,6 +194,15 @@ test('a test result outside the known set is rejected', () => {
   const trace = structuredClone(TRACE);
   trace.items[0].cases[0].tests[0].result = 'kinda';
   assert.match(check('trace.json', trace).join('\n'), /result/);
+});
+
+test('a trace case may rest on assumptions, and an item may list them with their status', () => {
+  const trace = structuredClone(TRACE);
+  trace.items[0].cases[0].rests_on = ['A1'];
+  trace.items[0].assumptions = [{ id: 'A1', status: 'open' }, { id: 'A2', status: 'confirmed' }];
+  assert.deepEqual(check('trace.json', trace), []);
+  trace.items[0].assumptions[1].status = 'maybe';
+  assert.match(check('trace.json', trace).join('\n'), /status/);
 });
 
 test('a case with no tests is valid, because design comes before automation', () => {
@@ -331,6 +371,28 @@ test('a completion report must state whether the exit criteria are met', () => {
 test('a progress report needs no exit-criteria verdict', () => {
   const text = REPORT.replace('completion', 'progress').replace('exit_criteria: not-met\n', '');
   assert.deepEqual(check('qa/reports/12.md', text), []);
+});
+
+test('an awaiting-owner report lists what it waits for', () => {
+  const text = REPORT.replace('exit_criteria: not-met', 'exit_criteria: awaiting-owner\nawaiting: [A3, A6]');
+  assert.deepEqual(check('qa/reports/12.md', text), []);
+});
+
+test('an awaiting-owner report without awaiting is rejected', () => {
+  const text = REPORT.replace('exit_criteria: not-met', 'exit_criteria: awaiting-owner');
+  assert.match(check('qa/reports/12.md', text).join('\n'), /awaiting/);
+});
+
+test('awaiting is rejected on a met report, and on a report with no verdict', () => {
+  const met = REPORT.replace('exit_criteria: not-met', 'exit_criteria: met\nawaiting: [A3]');
+  assert.notDeepEqual(check('qa/reports/12.md', met), []);
+  const progress = REPORT.replace('completion', 'progress').replace('exit_criteria: not-met', 'awaiting: [A3]');
+  assert.notDeepEqual(check('qa/reports/12.md', progress), []);
+});
+
+test('awaiting names assumptions, A<n>', () => {
+  const text = REPORT.replace('exit_criteria: not-met', 'exit_criteria: awaiting-owner\nawaiting: [Q3]');
+  assert.match(check('qa/reports/12.md', text).join('\n'), /awaiting/);
 });
 
 test('a plan needs an estimate', () => {
