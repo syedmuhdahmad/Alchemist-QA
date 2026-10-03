@@ -22,7 +22,7 @@
       }
     },
     "capabilities": {
-      "description": "Capability to tool skill.",
+      "description": "Capability to the tool skill that fills it, as <plugin>:<skill>, such as qa-web:vitest.",
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/capability" },
       "additionalProperties": { "type": "string" }

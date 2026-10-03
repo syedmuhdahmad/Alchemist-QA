@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/basis/<id>.acceptance.md frontmatter",
+  "description": "Acceptance criteria written as Given/When/Then scenarios for one work item (CTFL 4.5). Proposed until the owner confirms them.",
+  "type": "object",
+  "required": ["work_item", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "work_item": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["proposed", "confirmed"] }
+  }
+}

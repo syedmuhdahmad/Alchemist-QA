@@ -1,6 +1,6 @@
 {
   // Long lines are fine: prose is one line per paragraph and tables are wide.
-  "config": { "MD013": false, "MD033": { "allowed_elements": ["br"] } },
+  "config": { "MD013": false, "MD033": { "allowed_elements": ["br"] }, "MD025": { "front_matter_title": "" } },
   "globs": ["**/*.md"],
   // Eval prompts and graders are messages to a model, and templates hold <placeholders>: neither is a document.
   "ignores": [
@@ -9,6 +9,7 @@
     "CHANGELOG.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
     "plugins/*/evals/**",
+    "evals/integration/**",
     "plugins/*/skills/*/templates/**"
   ]
 }

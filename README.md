@@ -4,7 +4,7 @@ A QA company for [Claude Code](https://claude.com/claude-code). Give it a work i
 
 Its methods follow the ISTQB syllabi. Its tools are open source only. It never edits your product code.
 
-> **Status: phase 0.** The foundations are in place: the plugin skeleton, the authoring standard and its linter, the testware schemas, and the benchmark apps. There are no agents or test skills yet, so it cannot do test work today. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
+> **Status: phase 1.** The department has its six staff agents, twelve method skills from the CTFL syllabus, unit and component testing for React web and React Native, GitHub Issues intake, and `/qa:onboard`. It works one job per request, and a person reviews everything before it leaves the project. Hooks and unattended pipelines come in phase 2. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
 
 ## Install
 
@@ -16,7 +16,29 @@ claude plugin marketplace add syedmuhdahmad/Alchemist-QA
 claude plugin install qa@alchemist-qa
 ```
 
-Then, in a session, `/qa:about` tells you which version you have and what it can do.
+Add the tool plugin for your stack, or both:
+
+```bash
+claude plugin install qa-web@alchemist-qa
+```
+
+```bash
+claude plugin install qa-mobile@alchemist-qa
+```
+
+Then, in your project, run `/qa:onboard`. To take one GitHub issue through the department, start a session with the lead:
+
+```bash
+claude --agent qa:qa-lead
+```
+
+and ask it to test an issue, such as "take #12 through testing". `/qa:about` lists everything the installed version can do.
+
+| Plugin | What it adds |
+| --- | --- |
+| `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `/qa:onboard`, and `/qa:about`. |
+| `qa-web` | `vitest`: unit and component tests for React web with Vitest and Testing Library. |
+| `qa-mobile` | `jest-native`: unit and component tests for bare React Native with Jest and React Native Testing Library. |
 
 ## How it is built
 
@@ -34,11 +56,13 @@ First stack: React on the web, and React Native on Android and iOS, phones and t
 
 ```text
 .claude-plugin/marketplace.json   the marketplace
-plugins/qa/                       the core plugin: skills, schemas, and later agents and hooks
-tools/lint-skills/                checks every skill against docs/authoring.md
+plugins/qa/                       the core plugin: agents, method skills, intake, schemas
+plugins/qa-web/  plugins/qa-mobile/   tool skills for React web and React Native
+tools/lint-skills/                checks every skill and agent against docs/authoring.md
 tools/validate-testware/          checks testware files against plugins/qa/schemas
 evals/apps/                       benchmark web app, mobile app, and API, with seeded defects
 evals/answer-keys/                the seeded defects, and tests that prove each one is present
+evals/integration/                eval cases that need more than one plugin
 evals/spikes/                     measured experiments behind tool choices
 docs/                             roadmap, authoring standard, platform verification
 ```

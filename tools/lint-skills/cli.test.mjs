@@ -44,14 +44,14 @@ test('findSkills returns each child of a skills folder and skips node_modules', 
 test('the CLI exits 0 and reports the count when every skill is clean', () => {
   const run = spawnSync('node', [CLI, tree('Use when needed. Not for anything else.')], { encoding: 'utf8' });
   assert.equal(run.status, 0);
-  assert.match(run.stdout, /1 skill checked, 0 errors, 0 warnings/);
+  assert.match(run.stdout, /1 skill and 0 agents checked, 0 errors, 0 warnings/);
 });
 
 test('the CLI exits 1 and names the file and rule when a skill has an error', () => {
   const run = spawnSync('node', [CLI, tree('Helps with things.')], { encoding: 'utf8' });
   assert.equal(run.status, 1);
   assert.match(run.stdout, /plugins\/p\/skills\/demo\/SKILL\.md.*\[description\]/);
-  assert.match(run.stdout, /1 skill checked, 1 error, 0 warnings/);
+  assert.match(run.stdout, /1 skill and 0 agents checked, 1 error, 0 warnings/);
 });
 
 test('the CLI exits 1 when no skills are found, so a wrong path cannot pass', () => {

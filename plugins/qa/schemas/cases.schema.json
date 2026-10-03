@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/cases/<id>.md frontmatter",
+  "description": "The test cases designed for one work item. The cases themselves are rows of the table in the body (docs/testware.md).",
+  "type": "object",
+  "required": ["work_item"],
+  "additionalProperties": false,
+  "properties": {
+    "work_item": { "type": "string", "minLength": 1 },
+    "not_automated": {
+      "description": "Case id to the reason it has no automated test.",
+      "type": "object",
+      "propertyNames": { "pattern": "^TC-[A-Za-z0-9-]+-[0-9]{2,}$" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  }
+}

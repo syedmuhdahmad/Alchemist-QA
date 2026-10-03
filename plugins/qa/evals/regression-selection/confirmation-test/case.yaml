@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: regression-selection-confirmation-test
+context:
+  scaffold_script: fixture.sh

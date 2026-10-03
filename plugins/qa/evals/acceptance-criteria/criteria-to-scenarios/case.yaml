@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: acceptance-criteria-criteria-to-scenarios
+context:
+  scaffold_script: fixture.sh

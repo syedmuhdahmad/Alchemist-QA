@@ -9,9 +9,37 @@
     {
       "name": "qa",
       "source": "./plugins/qa",
-      "description": "Core QA department: routing, method skills, and orchestration. Phase 0 ships the skeleton only.",
+      "description": "Core QA department: the six staff agents, the ISTQB method skills, GitHub Issues intake, and /qa:onboard.",
       "category": "testing",
-      "tags": ["qa", "testing", "istqb"]
+      "tags": [
+        "qa",
+        "testing",
+        "istqb"
+      ]
+    },
+    {
+      "name": "qa-web",
+      "source": "./plugins/qa-web",
+      "description": "Unit and component tests for React web apps with Vitest and Testing Library.",
+      "category": "testing",
+      "tags": [
+        "qa",
+        "testing",
+        "react",
+        "vitest"
+      ]
+    },
+    {
+      "name": "qa-mobile",
+      "source": "./plugins/qa-mobile",
+      "description": "Unit and component tests for bare React Native apps with Jest and React Native Testing Library.",
+      "category": "testing",
+      "tags": [
+        "qa",
+        "testing",
+        "react-native",
+        "jest"
+      ]
     }
   ]
 }

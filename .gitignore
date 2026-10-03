@@ -12,3 +12,6 @@ evals/spikes/**/output/
 
 # Eval run output
 plugins/*/evals/results/
+
+# Integration eval run output
+evals/integration/results/

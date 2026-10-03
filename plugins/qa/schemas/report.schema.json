@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/reports/<id>.md frontmatter",
+  "description": "A test progress or completion report (CTFL 5.3). A completion report states whether the exit criteria are met.",
+  "type": "object",
+  "required": ["work_item", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "work_item": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["progress", "completion"] },
+    "exit_criteria": { "description": "Required on a completion report.", "enum": ["met", "not-met"] },
+    "reported_at": { "type": "string" }
+  },
+  "if": { "properties": { "kind": { "const": "completion" } } },
+  "then": { "required": ["exit_criteria"] }
+}

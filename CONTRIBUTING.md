@@ -41,6 +41,26 @@ npm ci
 npm run check
 ```
 
+## Run the evals
+
+Evals run Claude against each skill's cases and cost Claude usage, so CI does not run them. Install the benchmark apps' dependencies first, because the tool skill cases test those apps:
+
+```bash
+npm ci --prefix evals/apps/web && npm ci --prefix evals/apps/mobile
+```
+
+One plugin's cases, with a no-plugin baseline for comparison:
+
+```bash
+claude plugin eval ./plugins/qa --scaffold --allow-tools Write Edit Bash --runs 1 --max-cost-usd 5 --tag risk-analysis
+```
+
+Cases that need more than one plugin, including the end-to-end check, run from the repository root:
+
+```bash
+claude plugin eval . --eval-dir evals/integration --scaffold --allow-tools Write Edit Bash --max-cost-usd 10
+```
+
 ## Rules for a change
 
 1. **Tests first.** Tooling under `tools/` is test-driven: write the failing test, then the code.

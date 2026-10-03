@@ -4,11 +4,11 @@ stack:
   source: [src/, android/, ios/]
   tests: test/
 capabilities:
-  unit-web: vitest
-  unit-mobile: jest
-  e2e-web: playwright
-  e2e-mobile: maestro
-  load: k6
+  unit-web: qa-web:vitest
+  unit-mobile: qa-mobile:jest-native
+  e2e-web: qa-web:playwright
+  e2e-mobile: qa-mobile:maestro
+  load: qa-perf:k6
 devices:
   - { name: Pixel_7, platform: android, form: phone, os: "16" }
   - { name: Pixel_Tablet, platform: android, form: tablet, os: "16" }

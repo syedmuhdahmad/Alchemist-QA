@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qa/plans/<id>.md frontmatter",
+  "description": "A test plan for one work item or release (CTFL 5.1).",
+  "type": "object",
+  "required": ["work_item", "estimate_hours"],
+  "additionalProperties": false,
+  "properties": {
+    "work_item": { "type": "string", "minLength": 1 },
+    "estimate_hours": { "type": "number", "exclusiveMinimum": 0 },
+    "planned_at": { "type": "string" }
+  }
+}

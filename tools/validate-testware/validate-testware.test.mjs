@@ -251,3 +251,94 @@ verdict: not-ready
 `;
   assert.match(check('basis/14.review.md', fenced).join('\n'), /missing section/);
 });
+
+const CASES = `---
+work_item: "#12"
+---
+
+# Test cases: Apply a promo code
+
+| Id | Technique | Risk | Basis | Level | Input and steps | Expected result |
+| --- | --- | --- | --- | --- | --- | --- |
+| TC-12-01 | boundary-value | R-12-1 | Criterion 4 | component | Subtotal 50.00 | Shipping 0.00 |
+`;
+
+test('a cases file with the case table is valid', () => {
+  assert.deepEqual(check('qa/cases/12.md', CASES), []);
+});
+
+test('a cases file without the case table is rejected', () => {
+  const errors = check('qa/cases/12.md', CASES.split('| Id |')[0]);
+  assert.match(errors.join('\n'), /case table/);
+});
+
+test('a case row with an id that does not follow TC-<item>-<nn> is rejected', () => {
+  const errors = check('qa/cases/12.md', CASES.replace('TC-12-01', 'case 1'));
+  assert.match(errors.join('\n'), /case 1/);
+});
+
+test('a case row with a technique outside the list is rejected', () => {
+  const errors = check('qa/cases/12.md', CASES.replace('boundary-value', 'vibes'));
+  assert.match(errors.join('\n'), /vibes/);
+});
+
+test('not_automated may only name case ids', () => {
+  const errors = check('qa/cases/12.md', CASES.replace('---\n\n#', 'not_automated:\n  case-one: needs a device\n---\n\n#'));
+  assert.match(errors.join('\n'), /not_automated/);
+});
+
+const DEFECT = `---
+id: D-0001
+title: Shipping charged at exactly 50.00
+work_item: "#12"
+cases: [TC-12-01]
+severity: major
+status: draft
+---
+
+# D-0001: Shipping charged at exactly 50.00
+`;
+
+test('a draft defect report is valid', () => {
+  assert.deepEqual(check('qa/defects/D-0001.md', DEFECT), []);
+});
+
+test('a defect with a severity outside the scale is rejected', () => {
+  assert.match(check('qa/defects/D-0001.md', DEFECT.replace('major', 'urgent')).join('\n'), /severity/);
+});
+
+test('a defect id must be D- and at least four digits', () => {
+  assert.match(check('qa/defects/D-1.md', DEFECT.replace('D-0001\n', 'D-1\n')).join('\n'), /\/id/);
+});
+
+const REPORT = `---
+work_item: "#12"
+kind: completion
+exit_criteria: not-met
+---
+
+# Test completion report
+`;
+
+test('a completion report with an exit-criteria verdict is valid', () => {
+  assert.deepEqual(check('qa/reports/12.md', REPORT), []);
+});
+
+test('a completion report must state whether the exit criteria are met', () => {
+  assert.match(check('qa/reports/12.md', REPORT.replace('exit_criteria: not-met\n', '')).join('\n'), /exit_criteria/);
+});
+
+test('a progress report needs no exit-criteria verdict', () => {
+  const text = REPORT.replace('completion', 'progress').replace('exit_criteria: not-met\n', '');
+  assert.deepEqual(check('qa/reports/12.md', text), []);
+});
+
+test('a plan needs an estimate', () => {
+  assert.deepEqual(check('qa/plans/12.md', '---\nwork_item: "#12"\nestimate_hours: 6\n---\n'), []);
+  assert.match(check('qa/plans/12.md', '---\nwork_item: "#12"\n---\n').join('\n'), /estimate_hours/);
+});
+
+test('proposed acceptance criteria are checked as acceptance, not as a basis file', () => {
+  assert.deepEqual(check('qa/basis/12.acceptance.md', '---\nwork_item: "#12"\nstatus: proposed\n---\n'), []);
+  assert.match(check('qa/basis/12.acceptance.md', '---\nwork_item: "#12"\nstatus: maybe\n---\n').join('\n'), /status/);
+});
