@@ -154,6 +154,11 @@ test('a manual basis file needs an origin', () => {
   assert.match(errors.join('\n'), /origin/);
 });
 
+test('a manual basis file needs an origin with text in it, not only spaces', () => {
+  const errors = check('basis/REQ-1.md', MANUAL.replace(/^origin: .*$/m, 'origin: "   "'));
+  assert.match(errors.join('\n'), /origin/);
+});
+
 test('a manual basis id is REQ-<n>', () => {
   const errors = check('basis/R-product-1.md', MANUAL.replace('id: "REQ-1"', 'id: "R-product-1"'));
   assert.match(errors.join('\n'), /\/id/);

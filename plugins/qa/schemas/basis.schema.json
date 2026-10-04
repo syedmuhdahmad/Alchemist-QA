@@ -14,7 +14,7 @@
     "origin": {
       "description": "Where a manual work item came from, such as `qa/risk-register.md R-product-1` or `request in chat`.",
       "type": "string",
-      "minLength": 1
+      "pattern": "\\S"
     },
     "acceptance_criteria": {
       "description": "Required even when empty: an empty list is a finding for the basis review, a missing key is an adapter bug.",
