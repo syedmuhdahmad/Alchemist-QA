@@ -24,7 +24,8 @@ Bring a work item that is in no tracker into `qa/basis/REQ-<n>.md`, with a true 
 
 ### A request typed in chat
 
-1. With the Write tool, write the request to `qa/inbox/request.md` in this shape:
+1. If `qa/inbox/request.md` is already there, an earlier intake did not finish. Do not overwrite it: tell the person the title of the request in it, ask whether to bring that one in first or to replace it, and wait for their answer.
+2. With the Write tool, write the request to `qa/inbox/request.md` in this shape:
 
    ```text
    Title: <a short title, in the person's words>
@@ -33,7 +34,7 @@ Bring a work item that is in no tracker into `qa/basis/REQ-<n>.md`, with a true 
    ```
 
    If the request came from somewhere other than this chat, such as an email or a meeting, add a line `Origin: <where>` under the title. If it reports a defect, add `Type: bug`; if it is a user story, `Type: story`. Otherwise leave both out.
-2. From the project root, run:
+3. From the project root, run:
 
    ```bash
    node "${CLAUDE_SKILL_DIR}/scripts/manual-item.mjs" --from-request

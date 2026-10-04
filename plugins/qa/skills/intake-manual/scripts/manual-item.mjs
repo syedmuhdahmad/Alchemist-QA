@@ -208,7 +208,16 @@ function main(args) {
     return fail(error.code === 'EEXIST' ? `${path} already exists; nothing was written` : error.message);
   }
   // The basis file now holds the request word for word. Removing the request file means it is never taken in twice.
-  if (fromRequestMode) rmSync(inbox);
+  if (fromRequestMode) {
+    try {
+      rmSync(inbox, { force: true });
+    } catch (error) {
+      console.error(
+        `${path} holds the request, but qa/inbox/request.md could not be removed (${error.message}). ` +
+          'Remove it by hand, and do not run --from-request for it again: that would bring the same request in twice.',
+      );
+    }
+  }
   console.log(path);
   return 0;
 }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -107,6 +107,23 @@ test('the CLI brings in qa/inbox/request.md, removes it, and prints the path it 
   assert.deepEqual([front.title, front.origin, front.type], ['Check the newsletter sign-up', 'email from the owner', 'story']);
   assert.ok(body(text).includes(REQUEST), 'the request is kept word for word');
   assert.equal(existsSync(join(root, 'qa/inbox/request.md')), false, 'the request file is removed once it is taken in');
+});
+
+// A read-only folder stops the removal on Linux and macOS, but not on Windows or for root.
+const canLockFolder = process.platform !== 'win32' && process.getuid?.() !== 0;
+
+test('when the request file cannot be removed, the CLI still prints the basis path and warns against a retry', { skip: !canLockFolder }, () => {
+  const root = project(inbox(REQUEST));
+  chmodSync(join(root, 'qa/inbox'), 0o555);
+  try {
+    const result = run(root, '--from-request');
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), join(root, 'qa/basis/REQ-1.md'));
+    assert.match(result.stderr, /qa\/inbox\/request\.md could not be removed/);
+    assert.match(result.stderr, /do not run --from-request for it again/);
+  } finally {
+    chmodSync(join(root, 'qa/inbox'), 0o755);
+  }
 });
 
 test('a line REQUEST and shell syntax in a request or its title stay text and never run', () => {
