@@ -159,6 +159,12 @@ test('a manual basis id is REQ-<n>', () => {
   assert.match(errors.join('\n'), /\/id/);
 });
 
+test('a basis file with no source reports only the missing source, not the rules for manual items', () => {
+  const errors = check('basis/12.md', BASIS.replace('source: github-issues\n', '')).join('\n');
+  assert.match(errors, /source/);
+  assert.doesNotMatch(errors, /origin|REQ/);
+});
+
 test('a tracker basis file needs no origin', () => {
   assert.deepEqual(check('basis/12.md', BASIS), []);
 });

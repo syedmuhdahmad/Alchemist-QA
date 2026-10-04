@@ -37,7 +37,7 @@ It may have `created_at`. Its body says that no tracker item exists and keeps th
 
 - `--from-risk <risk id>` finds that row in `qa/risk-register.md`, in any section including the onboard draft. It writes `qa/basis/REQ-<n>.md` with type `task`, the risk's text as the title, the row quoted, and no acceptance criteria, so the basis review flags `missing-criteria`.
 - `--title "<title>" --request-file <file or ->` keeps the request word for word. It takes acceptance criteria from an "Acceptance criteria" list, with the same rule and the same code as `intake-github`. `--origin` overrides the default `request in chat`, and `--type` overrides `task`.
-- The number is one more than the highest `REQ-<n>` already used in `qa/` (basis, cases, plans, reports, state, register headings), so an id is never reused. The script never overwrites a file.
+- The number is one more than the highest `REQ-<n>` already used in `qa/` (basis, cases, plans, reports, state, charters, register headings), so an id is never reused. The script never overwrites a file.
 - It prints the path it wrote, or exits 2 with the reason.
 
 **Lead.** Step 1 runs `intake-github` for a GitHub issue and `intake-manual` for a risk from the register or a request typed in chat. The lead never writes a basis file itself. Risk and case ids follow from the work item id: `R-REQ-1-1`, `TC-REQ-1-01`.

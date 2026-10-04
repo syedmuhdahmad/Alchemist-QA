@@ -161,10 +161,25 @@ export function lastReply(transcript) {
       continue;
     }
     if (entry.type !== 'assistant' || entry.isSidechain) continue;
-    const text = (entry.message?.content ?? []).filter((block) => block.type === 'text' && block.text.trim()).pop();
+    const text = (entry.message?.content ?? [])
+      .filter((block) => block.type === 'text' && typeof block.text === 'string' && block.text.trim())
+      .pop();
     if (text) reply = text.text;
   }
   return reply;
+}
+
+/**
+ * The reply to grade: the last text in the session's transcript, or the stream's when the transcript is missing or
+ * cannot be read. Never throws, so a run always settles.
+ */
+export function finalReply(run, workspace, home = homedir()) {
+  try {
+    const transcript = run.sessionId && readIf(transcriptPath(workspace, run.sessionId, home));
+    return (transcript && lastReply(transcript)) || run.lastMessage;
+  } catch {
+    return run.lastMessage;
+  }
 }
 
 /**
@@ -190,8 +205,7 @@ export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
     child.on('close', () => {
       clearTimeout(timer);
       const run = parseStream(output);
-      const transcript = run.sessionId && readIf(transcriptPath(workspace, run.sessionId));
-      resolvePromise({ ...run, lastMessage: (transcript && lastReply(transcript)) || run.lastMessage });
+      resolvePromise({ ...run, lastMessage: finalReply(run, workspace) });
     });
   });
 }

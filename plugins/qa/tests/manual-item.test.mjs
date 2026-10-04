@@ -4,11 +4,12 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { validateFile } from '../../../tools/validate-testware/validate-testware.mjs';
 import { fromRequest, fromRisk, nextRequestId } from '../skills/intake-manual/scripts/manual-item.mjs';
 
-const SCRIPT = new URL('../skills/intake-manual/scripts/manual-item.mjs', import.meta.url).pathname;
+const SCRIPT = fileURLToPath(new URL('../skills/intake-manual/scripts/manual-item.mjs', import.meta.url));
 const NOW = '2026-10-04T10:00:00Z';
 
 const ROW_1 = '| R-product-1 | Editor HTML reaches `dangerouslySetInnerHTML` unsanitised: a "script" runs in readers\' browsers. | medium | high | high | Partitions over tags and URL schemes. |';

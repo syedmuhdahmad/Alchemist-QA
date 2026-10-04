@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
+import { finalReply, grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -171,4 +171,23 @@ test('the judge sees the work fenced off, and is told not to answer questions in
   assert.match(prompt, /do not answer/i);
   assert.match(prompt, /PASS if it names the contradiction\./);
   assert.equal(judgePrompt('c', 'x'.repeat(20000)).match(/x+/)[0].length, 12000);
+});
+
+test('a text block without a string text is skipped, not a crash', () => {
+  const entry = (content) => JSON.stringify({ type: 'assistant', message: { content } });
+  const transcript = [entry([{ type: 'text', text: 'The reply.' }]), entry([{ type: 'text' }]), entry([{ type: 'text', text: 42 }])].join('\n');
+  assert.equal(lastReply(transcript), 'The reply.');
+});
+
+test('the final reply falls back to the stream when the transcript cannot be read', () => {
+  const home = mkdtempSync(join(tmpdir(), 'home-'));
+  const run = { lastMessage: 'From the stream.', sessionId: 's1' };
+  assert.equal(finalReply(run, '/tmp/ws', home), 'From the stream.', 'no transcript');
+  mkdirSync(transcriptPath('/tmp/ws', 's1', home), { recursive: true });
+  assert.equal(finalReply(run, '/tmp/ws', home), 'From the stream.', 'a transcript path that cannot be read');
+  const other = { lastMessage: 'From the stream.', sessionId: 's2' };
+  mkdirSync(dirname(transcriptPath('/tmp/ws', 's2', home)), { recursive: true });
+  writeFileSync(transcriptPath('/tmp/ws', 's2', home), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'From the transcript.' }] } }));
+  assert.equal(finalReply(other, '/tmp/ws', home), 'From the transcript.');
+  assert.equal(finalReply({ lastMessage: 'Only the stream.' }, '/tmp/ws', home), 'Only the stream.', 'no session id');
 });

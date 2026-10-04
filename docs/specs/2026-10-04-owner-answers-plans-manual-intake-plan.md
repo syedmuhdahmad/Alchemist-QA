@@ -103,7 +103,7 @@
 **Interfaces:**
 
 - Produces:
-  - `nextRequestId(root): string`, such as `REQ-3`. It is one more than the highest `REQ-<n>` found in file names under `qa/basis`, `qa/cases`, `qa/plans`, `qa/reports`, and `qa/state`, and in `## REQ-<n>` headings of `qa/risk-register.md`.
+  - `nextRequestId(root): string`, such as `REQ-3`. It is one more than the highest `REQ-<n>` found in file names under `qa/basis`, `qa/cases`, `qa/plans`, `qa/reports`, `qa/state`, and `qa/charters`, and in `## REQ-<n>` headings of `qa/risk-register.md`.
   - `fromRisk(registerText, riskId, {id, now}): string`: the basis file text. It throws when the risk is missing or appears twice.
   - `fromRequest(requestText, {id, title, origin = 'request in chat', type = 'task', now}): string`: the basis file text.
   - CLI: `--from-risk <id>` or `--title <t> --request-file <file|->`, with `[--origin <text>] [--type story|bug|task] [--root <dir>]`. It prints the written path. On a usage error, unknown risk, or existing file it writes nothing and exits 2.

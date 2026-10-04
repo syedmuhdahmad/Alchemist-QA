@@ -25,6 +25,6 @@
     "fetched_at": { "type": "string" },
     "created_at": { "description": "When a manual work item was brought in.", "type": "string" }
   },
-  "if": { "properties": { "source": { "const": "manual" } } },
+  "if": { "required": ["source"], "properties": { "source": { "const": "manual" } } },
   "then": { "required": ["origin"], "properties": { "id": { "pattern": "^REQ-[0-9]+$" } } }
 }
