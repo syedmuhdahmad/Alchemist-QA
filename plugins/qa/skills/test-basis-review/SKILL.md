@@ -1,6 +1,6 @@
 ---
 name: test-basis-review
-description: Use when a work item, user story, or specification has to be checked for testability before test design starts, or someone asks whether a story is ready to test. Not for designing test cases, and not for reviewing code.
+description: Use when a work item, user story, or specification has to be checked for testability before test design starts, when someone asks whether a story is ready to test, or when the owner has answered a review's questions and the answers must be recorded. Not for designing test cases, and not for reviewing code.
 metadata:
   kind: method
   freedom: medium
@@ -34,7 +34,7 @@ Check one work item for testability and record the result in a file that the nex
    - Does another criterion already settle it? Then it is not a finding.
    - Does it belong to a different feature, such as removing or editing something this story only adds? Then it is outside this story and a `note` at most.
 4. Number the findings F1, F2, and so on.
-5. For each finding that is not a `contradiction` or a `note`, write one assumption that makes it testable, numbered A1, A2, and so on, naming the finding it covers. An assumption is the most likely reading for this product, written so the owner can confirm or correct it. For `missing-criteria`, write assumptions for the main success path, the main failure path, and any limit the story implies.
+5. For each finding that is not a `contradiction` or a `note`, write one assumption that makes it testable, numbered A1, A2, and so on, naming the finding it covers and the status `open`: `A1 (covers F1, open)`. An assumption is the most likely reading for this product, written so the owner can confirm or correct it. For `missing-criteria`, write assumptions for the main success path, the main failure path, and any limit the story implies.
 6. Set the verdict:
    - `not-ready` when any finding is a `contradiction`. No assumption can settle two statements that cannot both hold.
    - `ready-with-assumptions` when there is no contradiction and at least one finding is not a `note`.
@@ -42,6 +42,19 @@ Check one work item for testability and record the result in a file that the nex
 7. Write one question for the owner for each contradiction and each assumption.
 8. Write the file. This stage ends there: the work item stays as it is, and test design is the next stage.
 9. Reply with the file path, the verdict, and one line for each finding that is not a note.
+
+## Record the owner's answers
+
+When the owner answers the questions, in the review file or in their own words passed on by the lead, record each answer on the assumption it settles. Only the owner's words change a status: never your own judgement, and never silence.
+
+1. Write the date of the answer into the assumption's parenthesis:
+   - the owner agrees: `A1 (covers F1, confirmed 2026-10-04)`, and the text stays as it is;
+   - the owner gives another rule: `A2 (covers F2, corrected 2026-10-04)`, and the text becomes the owner's rule.
+2. Every assumption the owner did not answer gets, or keeps, the status `open`. A review written before statuses existed has none: add `open` to each unanswered one.
+3. In **Questions for the owner**, end each answered question with `(answered <date>)`.
+4. For each corrected assumption, update the expected result of every case in `qa/cases/<id>.md` whose Basis cites it, working the new value out from the corrected text.
+5. Leave the verdict and the findings as they are.
+6. Reply with each assumption's new status, and the ids of the cases whose expected results changed: their tests must be updated and run again.
 
 ## Checklist
 
@@ -51,3 +64,4 @@ Check one work item for testability and record the result in a file that the nex
 - [ ] Every finding other than a contradiction or a note has an assumption that names it.
 - [ ] The verdict follows step 6.
 - [ ] `qa/basis/<id>.review.md` exists, and its frontmatter has `work_item` and `verdict`.
+- [ ] Every assumption has a status: `open`, or the owner's `confirmed <date>` or `corrected <date>`.

@@ -32,11 +32,11 @@ Then, in your project, run `/qa:onboard`. To take one GitHub issue through the d
 claude --agent qa:qa-lead
 ```
 
-and ask it to test an issue, such as "take #12 through testing". `/qa:about` lists everything the installed version can do.
+and ask it to test an issue, such as "take #12 through testing". With no tracker item, name a risk from the register or describe the request, such as "test risk R-product-1". `/qa:about` lists everything the installed version can do.
 
 | Plugin | What it adds |
 | --- | --- |
-| `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `/qa:onboard`, and `/qa:about`. |
+| `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `intake-manual` (a risk from the register or a request typed in chat, when no tracker holds the item), `/qa:onboard`, and `/qa:about`. |
 | `qa-web` | `vitest`: unit and component tests for React web with Vitest and Testing Library. |
 | `qa-mobile` | `jest-native`: unit and component tests for bare React Native with Jest and React Native Testing Library. |
 

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: intake-manual-github-issue-not-manual
+context:
+  scaffold_script: fixture.sh

@@ -28,12 +28,17 @@ function section(text, title) {
  */
 export function draftComment(report, defects, reportPath) {
   const front = parseFrontmatter(report);
+  const verdict = {
+    met: 'exit criteria met',
+    'not-met': 'exit criteria not met',
+    'awaiting-owner': `waiting on the owner's answers (${[front.awaiting ?? []].flat().join(', ')})`,
+  }[front.exit_criteria] ?? 'exit criteria not met';
   const headline =
     front.kind === 'completion'
-      ? `**Test completion report for ${front.work_item}: exit criteria ${front.exit_criteria === 'met' ? 'met' : 'not met'}.**`
+      ? `**Test completion report for ${front.work_item}: ${verdict}.**`
       : `**Test progress report for ${front.work_item}.**`;
   const parts = [`<!-- alchemist-qa:report ${front.work_item} -->\n${headline}`];
-  for (const title of ['Summary', 'Exit criteria', 'Risk remaining']) {
+  for (const title of ['Summary', 'Exit criteria', 'Waiting on the owner', 'Risk remaining']) {
     const body = section(report, title);
     if (body) parts.push(title === 'Summary' ? body : `### ${title}\n\n${body}`);
   }

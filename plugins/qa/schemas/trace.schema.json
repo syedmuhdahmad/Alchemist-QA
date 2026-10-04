@@ -26,6 +26,19 @@
               }
             }
           },
+          "assumptions": {
+            "description": "The assumptions of the item's basis review, with the owner's answer so far.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "status"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^A[0-9]+$" },
+                "status": { "enum": ["open", "confirmed", "corrected"] }
+              }
+            }
+          },
           "cases": {
             "type": "array",
             "items": {
@@ -36,6 +49,11 @@
                 "id": { "type": "string" },
                 "technique": { "type": "string" },
                 "risk": { "type": "string" },
+                "rests_on": {
+                  "description": "The assumptions the case's expected result comes from: the A<n> ids in its Basis column.",
+                  "type": "array",
+                  "items": { "type": "string", "pattern": "^A[0-9]+$" }
+                },
                 "not_automated": { "description": "Why this case has no test.", "type": "string" },
                 "tests": {
                   "type": "array",

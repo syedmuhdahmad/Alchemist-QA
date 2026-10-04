@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { grade, judgeVerdict, loadCase, parseStream } from './eval-headless.mjs';
+import { finalReply, grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -130,4 +130,64 @@ test('the CLI takes the value of --case as a filter, not as the target', () => {
   const result = spawnSync('node', [CLI, '--case', 'nothing', empty], { encoding: 'utf8' });
   assert.equal(result.status, 1);
   assert.match(result.stdout, new RegExp(`no cases found under ${empty}`));
+});
+
+test('an empty result keeps the last reply, so the judge never grades an empty message', () => {
+  const lines = [
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'A1 confirmed, A2 corrected.' }] } }),
+    JSON.stringify({ type: 'result', result: '', total_cost_usd: 0.3 }),
+  ];
+  assert.equal(parseStream(lines.join('\n')).lastMessage, 'A1 confirmed, A2 corrected.');
+});
+
+test('the stream gives the session id, to find the transcript', () => {
+  const lines = [JSON.stringify({ type: 'system', subtype: 'init', session_id: 'abc-123' }), JSON.stringify({ type: 'result', result: 'ok' })];
+  assert.equal(parseStream(lines.join('\n')).sessionId, 'abc-123');
+});
+
+test('the final reply is the last main-thread text in the transcript, after background agents finished', () => {
+  const entry = (isSidechain, content) => JSON.stringify({ type: 'assistant', isSidechain, message: { content } });
+  const transcript = [
+    entry(false, [{ type: 'text', text: 'Started the lead.' }]),
+    entry(true, [{ type: 'text', text: 'A subagent talking to itself.' }]),
+    entry(false, [{ type: 'tool_use', name: 'Bash', input: {} }]),
+    JSON.stringify({ type: 'queue-operation', operation: 'remove' }),
+    entry(false, [{ type: 'thinking', thinking: '' }, { type: 'text', text: '#14 stopped at the gate.' }]),
+    entry(true, [{ type: 'text', text: 'Late subagent text.' }]),
+    '{"type":"assistant","message":{"content":[{"type":"te',
+  ].join('\n');
+  assert.equal(lastReply(transcript), '#14 stopped at the gate.');
+  assert.equal(lastReply(''), '');
+});
+
+test('the transcript lives under the projects folder named after the workspace path', () => {
+  assert.equal(transcriptPath('/tmp/eval-x.y', 'abc', '/home/me'), '/home/me/.claude/projects/-tmp-eval-x-y/abc.jsonl');
+});
+
+test('the judge sees the work fenced off, and is told not to answer questions in it', () => {
+  const work = 'I need one answer from you: 30 minutes or 24 hours?';
+  const prompt = judgePrompt('PASS if it names the contradiction.', work);
+  assert.ok(prompt.includes(`<work>\n${work}\n</work>`));
+  assert.match(prompt, /do not answer/i);
+  assert.match(prompt, /PASS if it names the contradiction\./);
+  assert.equal(judgePrompt('c', 'x'.repeat(20000)).match(/x+/)[0].length, 12000);
+});
+
+test('a text block without a string text is skipped, not a crash', () => {
+  const entry = (content) => JSON.stringify({ type: 'assistant', message: { content } });
+  const transcript = [entry([{ type: 'text', text: 'The reply.' }]), entry([{ type: 'text' }]), entry([{ type: 'text', text: 42 }])].join('\n');
+  assert.equal(lastReply(transcript), 'The reply.');
+});
+
+test('the final reply falls back to the stream when the transcript cannot be read', () => {
+  const home = mkdtempSync(join(tmpdir(), 'home-'));
+  const run = { lastMessage: 'From the stream.', sessionId: 's1' };
+  assert.equal(finalReply(run, '/tmp/ws', home), 'From the stream.', 'no transcript');
+  mkdirSync(transcriptPath('/tmp/ws', 's1', home), { recursive: true });
+  assert.equal(finalReply(run, '/tmp/ws', home), 'From the stream.', 'a transcript path that cannot be read');
+  const other = { lastMessage: 'From the stream.', sessionId: 's2' };
+  mkdirSync(dirname(transcriptPath('/tmp/ws', 's2', home)), { recursive: true });
+  writeFileSync(transcriptPath('/tmp/ws', 's2', home), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'From the transcript.' }] } }));
+  assert.equal(finalReply(other, '/tmp/ws', home), 'From the transcript.');
+  assert.equal(finalReply({ lastMessage: 'Only the stream.' }, '/tmp/ws', home), 'Only the stream.', 'no session id');
 });

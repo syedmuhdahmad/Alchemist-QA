@@ -1,22 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "qa/basis/<id>.md frontmatter",
-  "description": "One work item, read from a tracker by an intake adapter. The test basis for everything downstream.",
+  "description": "One work item, read from a tracker by an intake adapter, or brought in by intake-manual when no tracker holds it. The test basis for everything downstream.",
   "type": "object",
   "required": ["id", "source", "type", "title", "acceptance_criteria"],
   "additionalProperties": false,
   "properties": {
     "id": { "type": "string" },
-    "source": { "enum": ["github-issues", "azure-devops", "jira-cloud"] },
+    "source": { "enum": ["github-issues", "azure-devops", "jira-cloud", "manual"] },
     "type": { "enum": ["story", "bug", "task", "epic"] },
     "title": { "type": "string", "minLength": 1 },
     "url": { "type": "string" },
+    "origin": {
+      "description": "Where a manual work item came from, such as `qa/risk-register.md R-product-1` or `request in chat`.",
+      "type": "string",
+      "pattern": "\\S"
+    },
     "acceptance_criteria": {
       "description": "Required even when empty: an empty list is a finding for the basis review, a missing key is an adapter bug.",
       "type": "array",
       "items": { "type": "string" }
     },
     "links": { "type": "array", "items": { "type": "string" } },
-    "fetched_at": { "type": "string" }
-  }
+    "fetched_at": { "type": "string" },
+    "created_at": { "description": "When a manual work item was brought in.", "type": "string" }
+  },
+  "if": { "required": ["source"], "properties": { "source": { "const": "manual" } } },
+  "then": { "required": ["origin"], "properties": { "id": { "pattern": "^REQ-[0-9]+$" } } }
 }

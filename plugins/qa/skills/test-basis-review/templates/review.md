@@ -13,7 +13,7 @@ verdict: <ready | ready-with-assumptions | not-ready>
 
 ## Assumptions
 
-- A1 (covers F1): <the most likely reading, stated so the owner can confirm or correct it>
+- A1 (covers F1, open): <the most likely reading, stated so the owner can confirm or correct it>
 
 ## Questions for the owner
 

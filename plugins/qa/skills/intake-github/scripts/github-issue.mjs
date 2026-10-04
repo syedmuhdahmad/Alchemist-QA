@@ -14,7 +14,7 @@ const HEADING = /^#{1,6}\s+(.*?)\s*#*\s*$/;
 const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?(.*\S)\s*$/;
 
 /** List items under the first "Acceptance criteria" heading, up to the next heading. */
-function acceptanceCriteria(body) {
+export function acceptanceCriteria(body) {
   const criteria = [];
   let inside = false;
   for (const line of body.split(/\r?\n/)) {

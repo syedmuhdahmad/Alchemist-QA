@@ -84,3 +84,19 @@ cat > qa/runs/2026-10-03T12-00-00-unit-web.json <<'ITEM'
 {"title":"TC-12-05 charges shipping at 49.99","fullName":"TC-12-05 charges shipping at 49.99","status":"passed"}]}]}
 ITEM
 rm qa/defects/D-0001.md
+mkdir -p qa/plans
+cat > qa/plans/12.md <<'ITEM'
+---
+work_item: "#12"
+estimate_hours: 4
+---
+
+# Test plan: Apply a promo code in the cart
+
+## Exit criteria
+
+- Every case for R-12-1 (high) has passed.
+- No open defect of severity critical or major.
+- Every case has a test, or a reason it is not automated.
+- No result rests on an assumption the owner has not confirmed.
+ITEM
