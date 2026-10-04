@@ -3,12 +3,13 @@
  * Brings a work item that no tracker holds into QA as a basis file: qa/basis/REQ-<n>.md.
  * Usage:
  *   node manual-item.mjs --from-risk <risk id> [--root <dir>]
- *   node manual-item.mjs --title <title> --request-file <file or -> [--origin <text>] [--type story|bug|task] [--root <dir>]
- * A risk comes from a row of qa/risk-register.md; a request is the person's words, read from a file or stdin (-).
+ *   node manual-item.mjs --from-request [--root <dir>]
+ * A risk comes from a row of qa/risk-register.md. A request is the person's words, read from qa/inbox/request.md,
+ * which the agent writes with its Write tool and this script removes once the basis file holds it.
  * The id is one more than the highest REQ-<n> used anywhere in qa/, so an id is never reused, and an existing file
  * is never overwritten. No npm dependencies: plugins run on the user's machine as shipped.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -122,9 +123,38 @@ export function fromRequest(requestText, { id, title, origin = 'request in chat'
   return basis({ id, type, title, origin, criteria: acceptanceCriteria(labelled), now, body });
 }
 
+const REQUEST_LINE = /^(title|origin|type)[ \t]*:[ \t]*(.*?)[ \t]*$/i;
+
+/**
+ * Reads a request file: a Title line, optional Origin and Type lines, a blank line, then the request word for word.
+ * The agent writes it with its Write tool, so no text from the person ever passes through a shell.
+ * @param {string} text qa/inbox/request.md
+ * @returns {{title: string, origin?: string, type?: string, request: string}}
+ */
+export function parseRequestFile(text) {
+  const lines = text.split(/\r?\n/);
+  const fields = {};
+  let index = 0;
+  for (; index < lines.length && lines[index].trim() !== ''; index += 1) {
+    const match = lines[index].match(REQUEST_LINE);
+    if (!match) {
+      throw new Error(`line ${index + 1} of the request file is not a Title, Origin, or Type line: put a blank line before the request`);
+    }
+    const name = match[1].toLowerCase();
+    if (name in fields) throw new Error(`the request file has more than one ${name} line`);
+    if (!match[2]) throw new Error(`the ${name} line of the request file is empty`);
+    fields[name] = name === 'type' ? match[2].toLowerCase() : match[2];
+  }
+  if (!fields.title) throw new Error('the request file has no Title line');
+  if (fields.type !== undefined && !TYPES.includes(fields.type)) throw new Error(`Type must be one of ${TYPES.join(', ')}`);
+  return { ...fields, request: lines.slice(index + 1).join('\n') };
+}
+
 const USAGE = [
   'usage: manual-item.mjs --from-risk <risk id> [--root <dir>]',
-  '       manual-item.mjs --title <title> --request-file <file or -> [--origin <text>] [--type story|bug|task] [--root <dir>]',
+  '       manual-item.mjs --from-request [--root <dir>]',
+  '--from-request reads qa/inbox/request.md: a Title line, optional Origin and Type lines, a blank line, then the',
+  'request word for word. The file is removed once the basis file is written.',
 ].join('\n');
 
 function main(args) {
@@ -132,25 +162,29 @@ function main(args) {
     console.error(message);
     return 2;
   };
+  // Arguments are only flags, a risk id, and a folder: the person's words reach the script only through the request file.
   const values = {};
-  for (const name of ['--from-risk', '--title', '--request-file', '--origin', '--type', '--root']) {
-    const index = args.indexOf(name);
-    if (index === -1) continue;
-    const value = args[index + 1];
-    if (value === undefined || (value.startsWith('--') && value !== '-')) return fail(`${name} needs a value\n${USAGE}`);
-    values[name] = value;
+  let fromRequestMode = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const name = args[index];
+    if (name === '--from-request') {
+      fromRequestMode = true;
+    } else if (name === '--from-risk' || name === '--root') {
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith('--')) return fail(`${name} needs a value\n${USAGE}`);
+      values[name] = value;
+      index += 1;
+    } else {
+      return fail(`unknown argument ${name}\n${USAGE}`);
+    }
   }
   const fromRiskMode = values['--from-risk'] !== undefined;
-  const requestMode = values['--title'] !== undefined || values['--request-file'] !== undefined;
-  if (fromRiskMode === requestMode) return fail(USAGE);
-  if (requestMode && (!values['--title']?.trim() || values['--request-file'] === undefined)) return fail(USAGE);
-  if (values['--origin'] !== undefined && !values['--origin'].trim()) return fail(`--origin needs a value\n${USAGE}`);
-  const type = values['--type'] ?? 'task';
-  if (!TYPES.includes(type)) return fail(`--type must be one of ${TYPES.join(', ')}`);
+  if (fromRiskMode === fromRequestMode) return fail(USAGE);
 
   const root = values['--root'] ?? '.';
   const now = new Date().toISOString();
   const id = nextRequestId(root);
+  const inbox = join(root, 'qa', 'inbox', 'request.md');
   let text;
   try {
     if (fromRiskMode) {
@@ -158,9 +192,9 @@ function main(args) {
       if (!existsSync(register)) return fail('qa/risk-register.md does not exist, so there is no risk to bring in');
       text = fromRisk(readFileSync(register, 'utf8'), values['--from-risk'], { id, now });
     } else {
-      const file = values['--request-file'];
-      const request = readFileSync(file === '-' ? 0 : file, 'utf8');
-      text = fromRequest(request, { id, title: values['--title'].trim(), origin: values['--origin'], type, now });
+      if (!existsSync(inbox)) return fail('qa/inbox/request.md does not exist: write the request there first');
+      const { request, ...fields } = parseRequestFile(readFileSync(inbox, 'utf8'));
+      text = fromRequest(request, { ...fields, id, now });
     }
   } catch (error) {
     return fail(error.message);
@@ -173,6 +207,8 @@ function main(args) {
   } catch (error) {
     return fail(error.code === 'EEXIST' ? `${path} already exists; nothing was written` : error.message);
   }
+  // The basis file now holds the request word for word. Removing the request file means it is never taken in twice.
+  if (fromRequestMode) rmSync(inbox);
   console.log(path);
   return 0;
 }

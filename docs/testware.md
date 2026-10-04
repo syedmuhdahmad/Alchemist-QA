@@ -24,6 +24,7 @@ qa/
   defects/D-<n>.md        one defect report each
   plans/<id>.md           the test plan for a work item or release
   reports/<id>.md         progress and completion reports
+  inbox/request.md        a typed request on its way in, removed once intake-manual has read it
   outbox/                 comments and issues drafted for a person to post
   trace.json              work item -> risk -> case -> test -> result
   state/<id>.md           the lead's ledger for one work item
@@ -46,6 +47,7 @@ qa/
 | `defects/D-<n>.md` | Triager (`defect-reporting`) | A person, before it is filed | `defect.schema.json` |
 | `plans/<id>.md` | Manager (`test-planning`) | A person | `plan.schema.json` |
 | `reports/<id>.md` | Manager (`test-reporting`) | A person | `report.schema.json` |
+| `inbox/request.md` | The agent running `intake-manual`, with its Write tool | `intake-manual` script, which removes it once the basis file holds the request | None: a `Title:` line, optional `Origin:` and `Type:` lines, a blank line, then the request |
 | `outbox/` | `intake-github` write-back script | A person, who posts it | None |
 | `trace.json` | `traceability` script, after cases, runs, or defects change | Manager | `trace.schema.json` |
 | `state/<id>.md` | Lead | A person | None |
