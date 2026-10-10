@@ -97,6 +97,25 @@ test('an awaiting-owner report leads with the assumptions it waits on and carrie
   assert.match(draftComment(REPORT.replace('not-met', 'met'), [], 'qa/reports/12.md'), /exit criteria met\.\*\*/);
 });
 
+test('a report with nothing waiting on the owner drafts no section for it, but keeps "None." under Risk remaining', () => {
+  const nothing = REPORT.replace(
+    '## Risk remaining\n\n- R-12-1: sale items are discounted.',
+    '## Waiting on the owner\n\nNone.\n\n## Risk remaining\n\nNone.',
+  );
+  for (const verdict of ['not-met', 'met']) {
+    const comment = draftComment(nothing.replace('exit_criteria: not-met', `exit_criteria: ${verdict}`), [], 'qa/reports/12.md');
+    assert.doesNotMatch(comment, /Waiting on the owner/, verdict);
+    assert.match(comment, /### Risk remaining\n\nNone\./, verdict);
+  }
+});
+
+test('a not-met report still carries the questions waiting on the owner', () => {
+  const waiting = '## Waiting on the owner\n\n| A1 | Is free shipping judged after the discount? | TC-12-03 | passed 1 |\n\n## Risk remaining';
+  const comment = draftComment(REPORT.replace('## Risk remaining', waiting), [], 'qa/reports/12.md');
+  assert.match(comment, /exit criteria not met\.\*\*/);
+  assert.match(comment, /### Waiting on the owner\n\n\| A1 \| Is free shipping judged after the discount\?/);
+});
+
 test('a progress report says it is progress, with no verdict', () => {
   const progress = REPORT.replace('kind: completion', 'kind: progress').replace('exit_criteria: not-met\n', '');
   assert.match(draftComment(progress, [], 'qa/reports/12.md'), /\*\*Test progress report for #12\.\*\*/);

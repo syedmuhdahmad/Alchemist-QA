@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { validateFile } from '../../../tools/validate-testware/validate-testware.mjs';
-import { fromRequest, fromRisk, nextRequestId } from '../skills/intake-manual/scripts/manual-item.mjs';
+import { fromRequest, fromRisk, nextRequestId, parseRequestFile } from '../skills/intake-manual/scripts/manual-item.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../skills/intake-manual/scripts/manual-item.mjs', import.meta.url));
 const NOW = '2026-10-04T10:00:00Z';
@@ -55,6 +55,11 @@ function project(files = {}) {
 
 const run = (root, ...args) => spawnSync('node', [SCRIPT, '--root', root, ...args], { encoding: 'utf8' });
 
+/** The files for a project whose request file holds these lines, a blank line, and the request. */
+const inbox = (request, lines = ['Title: Check the newsletter sign-up']) => ({
+  'qa/inbox/request.md': `${lines.join('\n')}\n\n${request}`,
+});
+
 test('a risk row becomes REQ-1 with source manual, origin, type task, no criteria, and the row quoted', () => {
   const text = fromRisk(REGISTER, 'R-product-1', { id: 'REQ-1', now: NOW });
   const front = frontmatter(text);
@@ -88,26 +93,89 @@ test('the number follows the highest REQ id used anywhere in qa/, never reusing 
   assert.equal(nextRequestId(root), 'REQ-13');
 });
 
-test('a project with no qa folder gets REQ-1, and the folders are created', () => {
-  const root = project();
-  assert.equal(nextRequestId(root), 'REQ-1');
-  const result = spawnSync('node', [SCRIPT, '--root', root, '--title', 'Check the sign-up', '--request-file', '-'], {
-    encoding: 'utf8',
-    input: REQUEST,
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.ok(existsSync(join(root, 'qa/basis/REQ-1.md')));
+test('a project with no qa folder gets REQ-1', () => {
+  assert.equal(nextRequestId(project()), 'REQ-1');
 });
 
-test('an empty request, a row with no risk text, or an empty origin is refused', () => {
-  const root = project();
-  const empty = spawnSync('node', [SCRIPT, '--root', root, '--title', 'x', '--request-file', '-'], { encoding: 'utf8', input: '  \n' });
+test('the CLI brings in qa/inbox/request.md, removes it, and prints the path it wrote', () => {
+  const root = project(inbox(REQUEST, ['Title: Check the newsletter sign-up', 'Origin: email from the owner', 'Type: story']));
+  const result = run(root, '--from-request');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), join(root, 'qa/basis/REQ-1.md'));
+  const text = readFileSync(join(root, 'qa/basis/REQ-1.md'), 'utf8');
+  const front = frontmatter(text);
+  assert.deepEqual([front.title, front.origin, front.type], ['Check the newsletter sign-up', 'email from the owner', 'story']);
+  assert.ok(body(text).includes(REQUEST), 'the request is kept word for word');
+  assert.equal(existsSync(join(root, 'qa/inbox/request.md')), false, 'the request file is removed once it is taken in');
+});
+
+// A read-only folder stops the removal on Linux and macOS, but not on Windows or for root.
+const canLockFolder = process.platform !== 'win32' && process.getuid?.() !== 0;
+
+test('when the request file cannot be removed, the CLI still prints the basis path and warns against a retry', { skip: !canLockFolder }, () => {
+  const root = project(inbox(REQUEST));
+  chmodSync(join(root, 'qa/inbox'), 0o555);
+  try {
+    const result = run(root, '--from-request');
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), join(root, 'qa/basis/REQ-1.md'));
+    assert.match(result.stderr, /qa\/inbox\/request\.md could not be removed/);
+    assert.match(result.stderr, /do not run --from-request for it again/);
+  } finally {
+    chmodSync(join(root, 'qa/inbox'), 0o755);
+  }
+});
+
+test('a line REQUEST and shell syntax in a request or its title stay text and never run', () => {
+  const request = ['The form has three screens:', 'NAME', 'REQUEST', 'CONFIRM', '', 'A message keeps $(touch injected) and `touch injected` as typed.'].join('\n');
+  const title = 'Keep $(touch injected) as typed';
+  const root = project(inbox(request, [`Title: ${title}`]));
+  const result = spawnSync('node', [SCRIPT, '--from-request'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const text = readFileSync(join(root, 'qa/basis/REQ-1.md'), 'utf8');
+  assert.equal(frontmatter(text).title, title);
+  assert.ok(body(text).includes(request), 'the whole request is kept, past the REQUEST line');
+  assert.equal(existsSync(join(root, 'injected')), false);
+});
+
+test('the old --title, --request-file, --origin, and --type flags are refused, so no text from the person is on the command line', () => {
+  for (const flags of [
+    ['--title', 'x', '--request-file', '-'],
+    ['--from-request', '--title', 'x', '--request-file', '-'],
+    ['--from-request', '--origin', 'email'],
+    ['--from-request', '--type', 'bug'],
+  ]) {
+    const root = project(inbox(REQUEST));
+    const result = spawnSync('node', [SCRIPT, '--root', root, ...flags], { encoding: 'utf8', input: REQUEST });
+    assert.equal(result.status, 2, flags.join(' '));
+    assert.equal(existsSync(join(root, 'qa/basis')), false, flags.join(' '));
+  }
+});
+
+test('a request file is a Title line, optional Origin and Type lines, a blank line, then the request', () => {
+  assert.deepEqual(parseRequestFile('Title: Sign-up\nOrigin: email: from Ana\ntype: Bug\n\nTitle: part of the request\n\nCheck it.\n'), {
+    title: 'Sign-up',
+    origin: 'email: from Ana',
+    type: 'bug',
+    request: 'Title: part of the request\n\nCheck it.\n',
+  });
+  assert.deepEqual(parseRequestFile('Title: x\r\n\r\nCheck it.'), { title: 'x', request: 'Check it.' });
+  assert.throws(() => parseRequestFile('Title: x\nCheck it.'), /line 2 .*blank line/);
+  assert.throws(() => parseRequestFile('Origin: email\n\nCheck it.'), /no Title line/);
+  assert.throws(() => parseRequestFile('Title: x\nTitle: y\n\nCheck it.'), /more than one title line/);
+  assert.throws(() => parseRequestFile('Title: x\nType: wish\n\nCheck it.'), /Type must be one of story, bug, task/);
+  assert.throws(() => parseRequestFile('Title: x\nOrigin:  \n\nCheck it.'), /origin line .*is empty/);
+});
+
+test('an empty request, a row with no risk text, or an empty origin is refused, and the request file is kept', () => {
+  const root = project(inbox('  \n', ['Title: x']));
+  const empty = run(root, '--from-request');
   assert.equal(empty.status, 2);
   assert.match(empty.stderr, /request is empty/);
   assert.equal(existsSync(join(root, 'qa/basis')), false);
+  assert.ok(existsSync(join(root, 'qa/inbox/request.md')), 'a refused request file stays, to be corrected');
   assert.throws(() => fromRisk('| Id | Risk |\n| --- | --- |\n| R-x-1 |\n', 'R-x-1', { id: 'REQ-1', now: NOW }), /R-x-1 has no risk text/);
-  const origin = spawnSync('node', [SCRIPT, '--root', root, '--title', 'x', '--request-file', '-', '--origin', ''], { encoding: 'utf8', input: 'Check it.' });
-  assert.equal(origin.status, 2);
+  assert.equal(run(project(inbox('Check it.', ['Title: x', 'Origin:'])), '--from-request').status, 2);
 });
 
 test('the CLI brings in a risk and prints the path it wrote', () => {
@@ -126,13 +194,15 @@ test('an unknown risk id exits 2 and writes nothing', () => {
   assert.equal(existsSync(join(root, 'qa/basis')), false);
 });
 
-test('a request with no register, a missing title, or both modes at once is a usage error', () => {
+test('no register, no request file, or both modes at once is a usage error', () => {
   const root = project();
   assert.equal(run(root, '--from-risk', 'R-product-1').status, 2);
-  assert.equal(run(root, '--request-file', '-').status, 2);
-  assert.equal(run(root, '--from-risk', 'R-product-1', '--title', 'x', '--request-file', '-').status, 2);
+  const missing = run(root, '--from-request');
+  assert.equal(missing.status, 2);
+  assert.match(missing.stderr, /qa\/inbox\/request\.md does not exist/);
+  assert.equal(run(project({ ...inbox(REQUEST), 'qa/risk-register.md': REGISTER }), '--from-risk', 'R-product-1', '--from-request').status, 2);
   assert.equal(run(root).status, 2);
-  assert.equal(run(root, '--title', '--request-file', '-').status, 2);
+  assert.equal(run(root, '--from-risk').status, 2);
 });
 
 test('a request keeps its text, and only its Acceptance criteria list becomes criteria', () => {
@@ -158,19 +228,10 @@ test('quotes, colons, backticks, an escaped pipe, and a --- line survive', () =>
   assert.ok(body(risk).includes(ROW_2));
 });
 
-test('--origin and --type override the defaults', () => {
+test('an origin and a type override the defaults', () => {
   const text = fromRequest(REQUEST, { id: 'REQ-1', title: 'Sign-up', origin: 'email from the owner', type: 'story', now: NOW });
   assert.equal(frontmatter(text).origin, 'email from the owner');
   assert.equal(frontmatter(text).type, 'story');
-  const root = project();
-  const result = spawnSync('node', [SCRIPT, '--root', root, '--title', 'Sign-up', '--request-file', '-', '--origin', 'email', '--type', 'bug'], {
-    encoding: 'utf8',
-    input: REQUEST,
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const written = frontmatter(readFileSync(join(root, 'qa/basis/REQ-1.md'), 'utf8'));
-  assert.deepEqual([written.origin, written.type], ['email', 'bug']);
-  assert.equal(run(root, '--title', 'x', '--request-file', '-', '--type', 'wish').status, 2);
 });
 
 test('the result validates against the basis schema', () => {

@@ -40,7 +40,7 @@ A work item id (`#12`, `AB#123`, `PROJ-45`), a risk from the register (`R-produc
 
 ## Output
 
-Only `qa/state/<file>.md`: one line per step with the time, the agent, and the result. You write nothing else.
+Only `qa/state/<file>.md`: one line per step with the time, the agent, and the result, and `qa/inbox/request.md` when `intake-manual` asks for it. You write nothing else.
 
 ## Exit criteria
 
