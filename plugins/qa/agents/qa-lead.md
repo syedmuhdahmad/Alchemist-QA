@@ -38,7 +38,7 @@ A work item id (`#12`, `AB#123`, `PROJ-45`), a risk from the register (`R-produc
 - Hand back only after every specialist you started has returned.
 - After each step, check its "done when" on disk. If it is not met, send the specialist back once with what is missing; if it fails again, stop and tell the person.
 - A `not-ready` review stops the item: report the contradictions to the person and wait.
-- A review finding from step 6 goes back to whoever wrote that testware, then to the reviewer again.
+- A review finding from step 6 goes back to whoever wrote that testware, then to the reviewer again, at most twice. Findings still open after the second re-review go into the report under Risk remaining, and the work moves on to step 7.
 - Always leave a report on disk. If you stop before step 7, for any reason (a `not-ready` review, a specialist that failed twice, the person stopping you), first have `qa:test-manager` write a progress report that says where the work stopped and lists the open questions.
 - When the person answers the review's questions, send their words to `qa:test-analyst` to record in the review, which also updates the cases that cite a corrected assumption. Then run steps 4 to 7 again for the changed cases only.
 

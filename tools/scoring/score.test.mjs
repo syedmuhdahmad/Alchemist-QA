@@ -14,6 +14,8 @@ import {
   renderScorecard,
   sandbox,
   scorecardStale,
+  strykerConfig,
+  withoutTests,
 } from './score.mjs';
 
 test('the sandbox holds one app and the requirements, links the installed packages, and never the answer key', () => {
@@ -108,4 +110,20 @@ test('the scorecard shows each run and a summary per app and model, with routing
 
 test('the scorecard in the repo is in step with its records', () => {
   assert.deepEqual(scorecardStale(), [], 'run: node tools/scoring/scorecard.mjs');
+});
+
+test('Stryker runs only the tests that pass, and never mutates a test file', () => {
+  const failed = ['cart > TC-1-01 caps a line at 10 (11 allowed)', 'pricing > TC-1-02 rounds 1.005 (up)'];
+  const pattern = new RegExp(withoutTests(failed));
+  assert.equal(pattern.test('cart > TC-1-01 caps a line at 10 (11 allowed)'), false);
+  assert.equal(pattern.test('pricing > TC-1-02 rounds 1.005 (up)'), false);
+  assert.equal(pattern.test('cart > TC-1-03 starts empty'), true);
+  assert.equal(pattern.test('cart > TC-1-01 caps a line at 10 (11 allowed) again'), true, 'only exact names are left out');
+  const web = strykerConfig('web', failed);
+  assert.equal(web.testRunner, 'vitest');
+  assert.equal(web.vitest.configFile, 'stryker.vitest.config.ts');
+  assert.deepEqual(web.mutate, ['src/lib/**/*.ts', '!src/**/*.test.*', '!src/**/*.spec.*']);
+  const mobile = strykerConfig('mobile', failed);
+  assert.equal(mobile.testRunner, 'jest');
+  assert.equal(mobile.jest.config.testNamePattern, withoutTests(failed));
 });

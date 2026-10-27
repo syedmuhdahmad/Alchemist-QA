@@ -49,12 +49,17 @@ With `autonomy: L1` in `qa/profile.yaml`, the lead carries a work item through t
 How the department does on the benchmark product, measured unattended:
 
 <!-- generated:scorecard:start -->
-No benchmark run is recorded yet.
+| App | Model | Runs | Unit-level detection | Detection | False-defect rate | Mutation score | Flaky failures | Cost per run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| mobile | claude-opus-5-5 | 2 | 100% | 95% | 14% | 77% | 0 | $10.52 |
+| web | claude-opus-5-5 | 2 | 100% | 100% | 23% | 79% | 0 | $6.36 |
 
 Routing: 63 of 63 golden prompts by the plain-code matcher, and 17 of 17 cases by Claude with the hint.
 
 Every run, and how each figure is measured: [docs/scorecard.md](docs/scorecard.md).
 <!-- generated:scorecard:end -->
+
+What a run costs: a benchmark run, which brings a whole requirements document in as one work item, cost $6 to $14 of Claude usage and took 30 to 90 minutes. A single issue costs less. Each test plan estimates its own run, in `estimate_agent_minutes` and `estimate_agent_usd`.
 
 ## How it is built
 
