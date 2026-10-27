@@ -1,7 +1,7 @@
 {
   "name": "qa",
   "displayName": "Alchemist-QA",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Core QA department: the six staff agents, the ISTQB method skills, GitHub Issues intake, and /qa:onboard.",
   "author": {
     "name": "Muhammad Ahmad",

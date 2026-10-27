@@ -40,7 +40,9 @@ export function draftComment(report, defects, reportPath) {
   const parts = [`<!-- alchemist-qa:report ${front.work_item} -->\n${headline}`];
   for (const title of ['Summary', 'Exit criteria', 'Waiting on the owner', 'Risk remaining']) {
     const body = section(report, title);
-    if (body) parts.push(title === 'Summary' ? body : `### ${title}\n\n${body}`);
+    // "None." under Risk remaining tells the issue's readers no risk is left; under Waiting on the owner it says nothing.
+    if (!body || (title === 'Waiting on the owner' && /^none\.?$/i.test(body))) continue;
+    parts.push(title === 'Summary' ? body : `### ${title}\n\n${body}`);
   }
   if (defects.length > 0) {
     const lines = defects.map((text) => {

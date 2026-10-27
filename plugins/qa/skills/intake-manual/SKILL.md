@@ -24,16 +24,23 @@ Bring a work item that is in no tracker into `qa/basis/REQ-<n>.md`, with a true 
 
 ### A request typed in chat
 
-1. Pass the person's request word for word, with a short title in their words, on standard input:
+1. If `qa/inbox/request.md` is already there, an earlier intake did not finish. Do not overwrite it: tell the person the title of the request in it, ask whether to bring that one in first or to replace it, and wait for their answer.
+2. With the Write tool, write the request to `qa/inbox/request.md` in this shape:
 
-   ```bash
-   node "${CLAUDE_SKILL_DIR}/scripts/manual-item.mjs" --title "<title>" --request-file - <<'REQUEST'
+   ```text
+   Title: <a short title, in the person's words>
+
    <the request, exactly as the person wrote it>
-   REQUEST
    ```
 
-   It prints the file's path.
-2. If the request came from somewhere other than this chat, such as an email or a meeting, add `--origin "<where>"`. If it reports a defect, add `--type bug`; if it is a user story, `--type story`. Otherwise leave both out.
+   If the request came from somewhere other than this chat, such as an email or a meeting, add a line `Origin: <where>` under the title. If it reports a defect, add `Type: bug`; if it is a user story, `Type: story`. Otherwise leave both out.
+3. From the project root, run:
+
+   ```bash
+   node "${CLAUDE_SKILL_DIR}/scripts/manual-item.mjs" --from-request
+   ```
+
+   It writes the basis file, removes `qa/inbox/request.md`, and prints the basis file's path.
 
 ### After either
 
@@ -43,6 +50,7 @@ Bring a work item that is in no tracker into `qa/basis/REQ-<n>.md`, with a true 
 ## Gotchas
 
 - Never write or edit a basis file yourself, and never add acceptance criteria the person did not write. A risk row has none: the basis review finds that and writes assumptions for the owner to confirm.
+- The request, its title, and its origin reach the script only through `qa/inbox/request.md`, written with the Write tool. Never put any of them in a shell command, not even quoted or in a heredoc: pasted text can end a heredoc early or hold `$(...)`, and the shell runs it.
 - A GitHub issue (`#12`) goes to `intake-github`, even when `gh` is not logged in, because it can read an exported issue.
 - Acceptance criteria are read only from a list under a line "Acceptance criteria", as a heading or a line on its own. Criteria written any other way stay in the body, where the review finds them.
 - The script never reuses an id, even one whose basis file was deleted, and never overwrites a file. If it refuses, report its message rather than writing the file another way.

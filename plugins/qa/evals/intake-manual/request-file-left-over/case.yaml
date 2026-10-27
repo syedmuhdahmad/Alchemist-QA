@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: intake-manual-request-file-left-over
+context:
+  scaffold_script: fixture.sh
