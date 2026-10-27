@@ -1,4 +1,4 @@
-# Example only. The real routing manifest ships in phase 2.
+# Example only. The real manifest is plugins/qa/routing.yaml.
 routes:
   - id: analysis.basis-review
     activity: analysis

@@ -1,0 +1,313 @@
+{
+  "items": [
+    {
+      "kind": "github",
+      "label": "GitHub issue",
+      "pattern": "(?<![\\w&/])#\\d+\\b",
+      "route": "lead.github"
+    },
+    {
+      "kind": "azure",
+      "label": "Azure DevOps work item",
+      "pattern": "\\bAB#\\d+\\b"
+    },
+    {
+      "kind": "request",
+      "label": "work item with no tracker",
+      "pattern": "\\bREQ-\\d+\\b"
+    },
+    {
+      "kind": "risk",
+      "label": "risk from the register",
+      "pattern": "\\bR-(?:[A-Za-z0-9]+-)+\\d+\\b",
+      "route": "lead.manual"
+    },
+    {
+      "kind": "jira",
+      "label": "Jira issue",
+      "pattern": "\\b(?!REQ-|TC-|AB-)[A-Z][A-Z0-9]+-\\d+\\b(?!-)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "lead.github",
+      "agent": "qa-lead",
+      "skill": "qa:intake-github",
+      "signals": [
+        "github issue",
+        "this issue",
+        "the issue",
+        "through testing",
+        "take it through",
+        "up to the completion report",
+        "up to the report"
+      ]
+    },
+    {
+      "id": "lead.manual",
+      "agent": "qa-lead",
+      "skill": "qa:intake-manual",
+      "signals": [
+        "no ticket",
+        "there's no ticket",
+        "not in a tracker",
+        "no tracker",
+        "test risk",
+        "test the risk",
+        "request from the owner",
+        "up to the completion report",
+        "up to the report"
+      ]
+    },
+    {
+      "id": "analysis.basis-review",
+      "agent": "test-analyst",
+      "skill": "qa:test-basis-review",
+      "signals": [
+        "testable",
+        "is this testable",
+        "testability",
+        "ready to test",
+        "review this story",
+        "review the story",
+        "review the requirements",
+        "ambiguous"
+      ]
+    },
+    {
+      "id": "analysis.risk",
+      "agent": "test-analyst",
+      "skill": "qa:risk-analysis",
+      "signals": [
+        "what could go wrong",
+        "product risks",
+        "risk analysis",
+        "rate the risks",
+        "risks of",
+        "risks for",
+        "how risky"
+      ]
+    },
+    {
+      "id": "analysis.acceptance",
+      "agent": "test-analyst",
+      "skill": "qa:acceptance-criteria",
+      "signals": [
+        "given when then",
+        "given/when/then",
+        "acceptance scenarios",
+        "gherkin",
+        "write acceptance criteria",
+        "propose acceptance criteria"
+      ]
+    },
+    {
+      "id": "design.blackbox",
+      "agent": "test-analyst",
+      "skill": "qa:test-design-blackbox",
+      "signals": [
+        "test cases for",
+        "design test cases",
+        "design the test cases",
+        "boundary values",
+        "boundary value",
+        "equivalence partitions",
+        "decision table",
+        "state transitions",
+        "edge cases"
+      ]
+    },
+    {
+      "id": "design.whitebox",
+      "agent": "test-analyst",
+      "skill": "qa:test-design-whitebox",
+      "signals": [
+        "coverage gaps",
+        "code coverage",
+        "uncovered branches",
+        "branch coverage",
+        "statement coverage",
+        "not covered by tests",
+        "lines are not covered"
+      ]
+    },
+    {
+      "id": "design.exploratory",
+      "agent": "test-analyst",
+      "skill": "qa:exploratory-testing",
+      "signals": [
+        "exploratory",
+        "explore",
+        "charter",
+        "session-based",
+        "test tour"
+      ]
+    },
+    {
+      "id": "planning.plan",
+      "agent": "test-manager",
+      "skill": "qa:test-planning",
+      "signals": [
+        "test plan",
+        "plan the testing",
+        "plan testing",
+        "estimate the testing",
+        "how long will testing take",
+        "entry and exit criteria",
+        "exit criteria for"
+      ]
+    },
+    {
+      "id": "implementation.unit-web",
+      "agent": "automation-engineer",
+      "skill": "qa-web:vitest",
+      "signals": [
+        "automate",
+        "automated tests for",
+        "write the tests",
+        "unit tests",
+        "component tests",
+        "web app",
+        "react component",
+        "vitest"
+      ]
+    },
+    {
+      "id": "implementation.unit-mobile",
+      "agent": "automation-engineer",
+      "skill": "qa-mobile:jest-native",
+      "signals": [
+        "automate",
+        "automated tests for",
+        "write the tests",
+        "unit tests",
+        "component tests",
+        "mobile",
+        "mobile app",
+        "react native",
+        "screen component"
+      ]
+    },
+    {
+      "id": "execution.triage",
+      "agent": "failure-triager",
+      "skill": "qa:failure-triage",
+      "signals": [
+        "tests failed",
+        "test failed",
+        "failing tests",
+        "failing test",
+        "test failures",
+        "make the tests pass",
+        "make it pass",
+        "flaky",
+        "triage",
+        "why did"
+      ]
+    },
+    {
+      "id": "execution.defect",
+      "agent": "failure-triager",
+      "skill": "qa:defect-reporting",
+      "signals": [
+        "defect report",
+        "bug report",
+        "report the defect",
+        "report this bug",
+        "file a bug",
+        "write up the bug",
+        "write up the defect"
+      ]
+    },
+    {
+      "id": "execution.regression",
+      "agent": "automation-engineer",
+      "skill": "qa:regression-selection",
+      "signals": [
+        "which tests to run",
+        "which tests should i run",
+        "what should i rerun",
+        "tests to rerun",
+        "regression",
+        "confirmation test",
+        "after this change",
+        "changed files"
+      ]
+    },
+    {
+      "id": "design.review",
+      "agent": "test-reviewer",
+      "skill": "qa:test-design-blackbox",
+      "signals": [
+        "review the test cases",
+        "review these test cases",
+        "review the tests",
+        "review these tests",
+        "check the test cases",
+        "review the testware",
+        "independent review"
+      ]
+    },
+    {
+      "id": "completion.report",
+      "agent": "test-manager",
+      "skill": "qa:test-reporting",
+      "signals": [
+        "test report",
+        "completion report",
+        "progress report",
+        "can we stop testing",
+        "are we done testing",
+        "exit criteria met",
+        "ready to release",
+        "summary of the testing"
+      ]
+    },
+    {
+      "id": "monitoring.trace",
+      "agent": "test-manager",
+      "skill": "qa:traceability",
+      "signals": [
+        "traceability",
+        "what is covered",
+        "what's covered",
+        "which risks have no",
+        "no test case",
+        "no tests",
+        "update the trace",
+        "trace.json"
+      ]
+    }
+  ],
+  "depth": {
+    "low": {
+      "techniques": [
+        "equivalence-partitioning"
+      ],
+      "review": "none",
+      "devices": "Smoke: one browser and one Android phone"
+    },
+    "medium": {
+      "techniques": [
+        "equivalence-partitioning",
+        "boundary-value",
+        "decision-table",
+        "error-guessing"
+      ],
+      "review": "sampled",
+      "devices": "Regression: a phone and a tablet"
+    },
+    "high": {
+      "techniques": [
+        "equivalence-partitioning",
+        "boundary-value",
+        "decision-table",
+        "error-guessing",
+        "state-transition",
+        "exploratory"
+      ],
+      "review": "all",
+      "devices": "Full portfolio: browsers, Android, iOS, tablets, and the non-functional packs"
+    }
+  }
+}

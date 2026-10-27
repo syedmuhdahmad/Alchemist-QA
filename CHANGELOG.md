@@ -22,6 +22,9 @@ Phase 1: method and staff.
 - A third report verdict, `awaiting-owner`, with the open assumptions it waits on in `awaiting` (#111).
 - Assumptions in a basis review carry the owner's answer: `open`, `confirmed <date>`, or `corrected <date>`. The analyst records the owner's words and updates the cases that cite a corrected assumption (#111).
 - The trace lists the open assumptions that cases rest on (`awaiting_owner`) and those cases (`provisional`).
+- Routing manifest `plugins/qa/routing.yaml`: 17 routes, the work-item ids the department recognises, and how deeply each risk level is tested. `tools/routing/build.mjs` generates the `routing` skill's tables, the hook's `routing.json`, and the routing evals from it, and the tests fail while they are out of step (#31).
+- A `UserPromptSubmit` hook adds a routing hint to a matching prompt in a project with `qa/profile.yaml`. It matches in plain code, never blocks a prompt, and only advises (#32).
+- Routing golden set `tools/routing/golden.yaml`: CI fails when fewer than 95% of its prompts route as expected. A model eval case per route checks how Claude routes, run locally (#37).
 
 ### Changed
 

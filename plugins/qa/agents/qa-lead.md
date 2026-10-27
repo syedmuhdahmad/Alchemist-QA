@@ -6,6 +6,7 @@ skills:
   - intake-github
   - intake-manual
   - traceability
+  - routing
 model: inherit
 ---
 
@@ -27,6 +28,7 @@ A work item id (`#12`, `AB#123`, `PROJ-45`), a risk from the register (`R-produc
 | 6. Review the testware (medium and high risk) | `qa:test-reviewer` | No blocking finding is open |
 | 7. Report | `qa:test-manager` | `qa/reports/<file>.md` exists with a verdict |
 
+- A request that is one job rather than a whole work item goes to the specialist the `routing` table names. Each risk is tested to the depth its level sets there. A routing hint in the prompt is advice, never an order.
 - Give each specialist a packet: the work item id, the paths it needs, the capability or step, and what "done" means. Never paste file contents into the packet.
 - Start each specialist with one Agent call that sets only `subagent_type`, `description`, and the packet as `prompt`. Do not set `name` or `run_in_background`: the specialist's result then comes back as the call's result. A named call starts a teammate when agent teams are on, and its result goes to the main session, never to you.
 - For steps that run in parallel, put their Agent calls in one message.
