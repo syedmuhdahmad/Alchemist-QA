@@ -23,13 +23,15 @@ Set a project up for the department: its profile, its test tools, a first view o
 2. Show the profile and ask the person to check three things it cannot know: the tracker (Jira Cloud is never detected), the environments and what each may be used for, and the device list.
 3. For each capability in the profile, check its tool's dependencies with the `ensure-deps` script that the capability's tool skill names (`qa-web:vitest` for `unit-web`, `qa-mobile:jest-native` for `unit-mobile`). Report what is missing with the install command. Install nothing without the person's yes.
 4. Draft a first risk register. Read the product's README and any requirements document, list its main features, and for each feature write the risks that matter most, rated and responded to with the rules of the `risk-analysis` skill. Put them in `qa/risk-register.md` under exactly `## Product: first pass`, the heading the trace script skips, numbered `R-product-<n>`, and say they are a draft to be replaced by each work item's own analysis.
-5. Offer the permission rules below for the project's own `.claude/settings.json`. A plugin cannot grant permissions, so this is the person's choice. Write them only if the person says yes, and merge them into any rules already there.
+5. Add `qa/runs/latest/` and `qa/runs/coverage/` to the project's `.gitignore`, creating it if needed and skipping lines already there. They hold the raw run reports and coverage, which are large and are written again on every run; the slim runs in `qa/runs/` stay in the repository.
+6. Offer the permission rules below for the project's own `.claude/settings.json`. A plugin cannot grant permissions, so this is the person's choice. Write them only if the person says yes, and merge them into any rules already there.
 
    ```json
    {
      "permissions": {
        "allow": [
          "Bash(node *trace.mjs *)",
+         "Bash(node *pipeline.mjs *)",
          "Bash(bash *ensure-deps.sh *)",
          "Bash(bash *run.sh *)"
        ]
@@ -37,4 +39,4 @@ Set a project up for the department: its profile, its test tools, a first view o
    }
    ```
 
-6. Reply with what was written, what is missing, and the next step: bring in a work item, for example with the `intake-github` skill.
+7. Reply with what was written, what is missing, and the next step: bring in a work item, for example with the `intake-github` skill.

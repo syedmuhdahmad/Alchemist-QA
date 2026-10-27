@@ -5,9 +5,14 @@
   "type": "object",
   "required": ["work_item", "estimate_hours"],
   "additionalProperties": false,
+  "$defs": {
+    "range": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number", "minimum": 0 } }
+  },
   "properties": {
     "work_item": { "type": "string", "minLength": 1 },
-    "estimate_hours": { "type": "number", "exclusiveMinimum": 0 },
+    "estimate_hours": { "description": "Human effort, as if a person did the work.", "type": "number", "exclusiveMinimum": 0 },
+    "estimate_agent_minutes": { "description": "The department's run, low and high: wall-clock minutes.", "$ref": "#/$defs/range" },
+    "estimate_agent_usd": { "description": "The department's run, low and high: Claude usage in US dollars.", "$ref": "#/$defs/range" },
     "planned_at": { "type": "string" }
   }
 }

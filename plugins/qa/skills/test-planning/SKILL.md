@@ -34,7 +34,7 @@ Write the plan that says what will be tested, how deeply, in what order, and whe
    - no open defect of severity critical or major;
    - no result rests on an assumption the owner has not confirmed (`awaiting_owner` in the trace coverage is empty). While one does, the verdict is `awaiting-owner`, not `not-met`;
    - any other share the team sets, such as the share of medium-risk cases passed.
-6. **Estimate.** Count the cases, or the conditions where there are no cases yet, by level, and multiply by an effort per case that you state. Add time for review, defect reports, and reruns, and show the working. Put the total, in hours, in `estimate_hours`.
+6. **Estimate.** Count the cases, or the conditions where there are no cases yet, by level, and multiply by an effort per case that you state. Add time for review, defect reports, and reruns, and show the working. Put the total, in hours, in `estimate_hours`. Then estimate the department's own run, which is what the work will really take: about 10 + 0.5 to 1 minute per case, and about $2 + $0.10 to $0.20 per case of Claude usage. Put both ranges in `estimate_agent_minutes` and `estimate_agent_usd`, as `[low, high]`, and replace these rates with the scorecard's when it has figures for a similar item.
 7. **Priority order.** List what is tested first: high risks first, then medium, then low. Within a level, put first whatever other work depends on.
 8. Write the plan, then reply with its path, the estimate, and the exit criteria.
 
@@ -43,4 +43,5 @@ Write the plan that says what will be tested, how deeply, in what order, and whe
 - [ ] Every work item in scope has a risk section.
 - [ ] Every exit criterion can be checked from the trace or the defect files.
 - [ ] The estimate shows its working and matches `estimate_hours`.
+- [ ] The plan estimates the agent run in `estimate_agent_minutes` and `estimate_agent_usd`.
 - [ ] The priority order starts with the high risks.

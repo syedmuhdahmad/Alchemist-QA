@@ -417,6 +417,13 @@ test('a plan needs an estimate', () => {
   assert.match(check('qa/plans/12.md', '---\nwork_item: "#12"\n---\n').join('\n'), /estimate_hours/);
 });
 
+test('a plan may estimate the agent run as ranges of minutes and US dollars', () => {
+  const plan = (extra) => `---\nwork_item: "#12"\nestimate_hours: 6\n${extra}\n---\n`;
+  assert.deepEqual(check('qa/plans/12.md', plan('estimate_agent_minutes: [35, 60]\nestimate_agent_usd: [7, 12]')), []);
+  assert.match(check('qa/plans/12.md', plan('estimate_agent_usd: 9')).join('\n'), /estimate_agent_usd/);
+  assert.match(check('qa/plans/12.md', plan('estimate_agent_minutes: [60, 35, 10]')).join('\n'), /estimate_agent_minutes/);
+});
+
 test('proposed acceptance criteria are checked as acceptance, not as a basis file', () => {
   assert.deepEqual(check('qa/basis/12.acceptance.md', '---\nwork_item: "#12"\nstatus: proposed\n---\n'), []);
   assert.match(check('qa/basis/12.acceptance.md', '---\nwork_item: "#12"\nstatus: maybe\n---\n').join('\n'), /status/);

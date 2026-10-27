@@ -42,6 +42,18 @@ In a project with `qa/profile.yaml`, a hook adds a routing hint to each prompt t
 | `qa-web` | `vitest`: unit and component tests for React web with Vitest and Testing Library. |
 | `qa-mobile` | `jest-native`: unit and component tests for bare React Native with Jest and React Native Testing Library. |
 
+## Scorecard
+
+How the department does on the benchmark product, measured unattended:
+
+<!-- generated:scorecard:start -->
+No benchmark run is recorded yet.
+
+Routing: 63 of 63 golden prompts by the plain-code matcher, and 17 of 17 cases by Claude with the hint.
+
+Every run, and how each figure is measured: [docs/scorecard.md](docs/scorecard.md).
+<!-- generated:scorecard:end -->
+
 ## How it is built
 
 | Idea | What it means |

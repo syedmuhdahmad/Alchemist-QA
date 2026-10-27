@@ -1,6 +1,8 @@
 ---
 work_item: "<work item id, or release-<version>>"
 estimate_hours: <total hours, a number>
+estimate_agent_minutes: [<low>, <high>]
+estimate_agent_usd: [<low>, <high>]
 ---
 
 # Test plan: <title>
@@ -34,6 +36,8 @@ Platforms: <from the profile, such as web, Android phone, Android tablet>.
 | --- | --- | --- | --- |
 | <cases at one level, review, defect reports, reruns> | <n> | <h> | <n x h> |
 | **Total** | | | **<sum>** |
+
+Agent run: <low> to <high> minutes and $<low> to $<high> of Claude usage for <n> cases.
 
 ## Priority order
 
