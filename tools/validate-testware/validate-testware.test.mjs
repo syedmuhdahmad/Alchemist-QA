@@ -46,26 +46,32 @@ const PIPELINE = `pipelines:
       - id: design
         agent: test-analyst
         method: test-design-blackbox
-        exit: ["qa/cases/{item}.md exists"]
+        exit: [cases]
 `;
 
-test('a pipeline stage with an agent and exit criteria is valid', () => {
+test('a pipeline stage with an agent and exit checks is valid', () => {
   assert.deepEqual(check('pipelines.yaml', PIPELINE), []);
 });
 
-test('a stage without exit criteria is rejected', () => {
-  const errors = check('pipelines.yaml', PIPELINE.replace('        exit: ["qa/cases/{item}.md exists"]\n', ''));
+test('a stage without exit checks is rejected', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('        exit: [cases]\n', ''));
   assert.match(errors.join('\n'), /exit/);
 });
 
-test('a stage must name either one agent or parallel branches', () => {
-  const errors = check('pipelines.yaml', PIPELINE.replace('        agent: test-analyst\n', ''));
-  assert.match(errors.join('\n'), /stages\/0/);
+test('an exit check the engine does not know is rejected', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('exit: [cases]', 'exit: ["qa/cases/{item}.md exists"]'));
+  assert.match(errors.join('\n'), /exit\/0/);
 });
 
-test('a parallel stage is valid without an agent', () => {
-  const text = PIPELINE.replace('        agent: test-analyst\n', '        parallel: [web, mobile]\n');
+test('a stage must name its agent', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('        agent: test-analyst\n', ''));
+  assert.match(errors.join('\n'), /agent/);
+});
+
+test('a parallel stage still names its agent, one per capability', () => {
+  const text = PIPELINE.replace('        method: test-design-blackbox\n', '        parallel: true\n');
   assert.deepEqual(check('pipelines.yaml', text), []);
+  assert.match(check('pipelines.yaml', text.replace('parallel: true', 'parallel: [web, mobile]')).join('\n'), /parallel/);
 });
 
 const PROFILE = `stack:

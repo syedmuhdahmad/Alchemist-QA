@@ -1,0 +1,65 @@
+{
+  "pipelines": {
+    "feature": {
+      "stages": [
+        {
+          "id": "intake",
+          "agent": "qa-lead",
+          "exit": [
+            "basis"
+          ]
+        },
+        {
+          "id": "analysis",
+          "agent": "test-analyst",
+          "method": "test-basis-review",
+          "exit": [
+            "review-not-blocked",
+            "register-section",
+            "cases"
+          ]
+        },
+        {
+          "id": "plan",
+          "agent": "test-manager",
+          "method": "test-planning",
+          "exit": [
+            "plan-exit-criteria"
+          ]
+        },
+        {
+          "id": "automate",
+          "agent": "automation-engineer",
+          "parallel": true,
+          "exit": [
+            "cases-automated"
+          ]
+        },
+        {
+          "id": "triage",
+          "agent": "failure-triager",
+          "method": "failure-triage",
+          "exit": [
+            "failures-classed"
+          ]
+        },
+        {
+          "id": "review",
+          "agent": "test-reviewer",
+          "when": "risk >= medium",
+          "exit": [
+            "review-recorded"
+          ]
+        },
+        {
+          "id": "report",
+          "agent": "test-manager",
+          "method": "test-reporting",
+          "exit": [
+            "report-verdict"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -19,16 +19,22 @@
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["id", "exit"],
+              "required": ["id", "agent", "exit"],
               "additionalProperties": false,
-              "oneOf": [{ "required": ["agent"] }, { "required": ["parallel"] }],
               "properties": {
                 "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
                 "agent": { "type": "string" },
                 "method": { "type": "string" },
-                "parallel": { "type": "array", "minItems": 2, "items": { "type": "string" } },
-                "when": { "type": "string" },
-                "exit": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                "parallel": { "description": "One agent per capability in qa/profile.yaml, at once.", "type": "boolean" },
+                "when": { "description": "The stage runs only when this holds.", "enum": ["risk >= medium"] },
+                "exit": {
+                  "description": "Named checks in the pipeline skill's checks.mjs, all of which must hold on disk.",
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "enum": ["basis", "review-not-blocked", "register-section", "cases", "plan-exit-criteria", "cases-automated", "failures-classed", "review-recorded", "report-verdict"]
+                  }
+                }
               }
             }
           }

@@ -15,7 +15,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const CASE_ID = /TC-[A-Za-z0-9-]+-\d{2,}\b/g;
+export const CASE_ID = /TC-[A-Za-z0-9-]+-\d{2,}\b/g;
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'qa', 'dist', 'build', 'coverage', 'Pods', '.gradle']);
 
@@ -133,7 +133,7 @@ function testsByCase(root) {
   return byCase;
 }
 
-const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
+export const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
 
 const SEVERITY = { passed: 0, 'not-run': 1, failed: 2 };
 
@@ -158,6 +158,8 @@ function resultsByCase(root) {
       } catch {
         continue;
       }
+      // A slim run from runs.mjs keeps its tests already in the trace's terms.
+      for (const slim of report.format === 'alchemist-run/1' ? report.tests : []) record(slim.title, slim.status);
       for (const suite of report.testResults ?? []) {
         for (const assertion of suite.assertionResults ?? []) {
           record(assertion.fullName ?? assertion.title ?? '', STATUS[assertion.status] ?? 'not-run');

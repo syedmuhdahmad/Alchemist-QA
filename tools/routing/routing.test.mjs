@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accuracy, buildManifest, replaceBetween, renderDepth, renderRoutes, staleFiles } from './build.mjs';
+import { accuracy, buildManifest, buildPipelines, replaceBetween, renderDepth, renderRoutes, staleFiles } from './build.mjs';
 
 const KNOWN = {
   agents: ['qa-lead', 'test-analyst', 'automation-engineer'],
@@ -93,4 +93,26 @@ test('the repo is in step with routing.yaml, and the golden set routes at least 
   const result = accuracy(golden, manifest);
   assert.ok(result.total >= 50, `the golden set has ${result.total} prompts`);
   assert.ok(result.correct / result.total >= 0.95, `accuracy ${result.correct}/${result.total}; misses:\n${JSON.stringify(result.misses, null, 2)}`);
+});
+
+test('the pipelines manifest names agents and skills that exist, and keeps every stage field the engine reads', () => {
+  const yaml = `pipelines:
+  feature:
+    stages:
+      - id: intake
+        agent: qa-lead
+        exit: [basis]
+      - id: design
+        agent: test-analyst
+        method: test-design-blackbox
+        when: risk >= medium
+        exit: [cases]
+`;
+  const { manifest, errors } = buildPipelines(yaml, KNOWN);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(manifest.pipelines.feature.stages[1], { id: 'design', agent: 'test-analyst', method: 'test-design-blackbox', when: 'risk >= medium', exit: ['cases'] });
+  const bad = buildPipelines(yaml.replace('agent: test-analyst', 'agent: tester').replace('method: test-design-blackbox', 'method: nope'), KNOWN);
+  assert.ok(bad.errors.some((e) => /stage design names agent tester/.test(e)), bad.errors.join('\n'));
+  assert.ok(bad.errors.some((e) => /stage design names skill nope/.test(e)), bad.errors.join('\n'));
+  assert.ok(buildPipelines(yaml.replace('exit: [basis]', 'exit: [bassis]'), KNOWN).errors.length > 0);
 });

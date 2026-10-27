@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Builds the routing layer from plugins/qa/routing.yaml, the single source:
+ * Builds the routing layer from plugins/qa/routing.yaml, and the pipelines from plugins/qa/pipelines.yaml:
  *   plugins/qa/skills/routing/routing.json          what the UserPromptSubmit hook matches against
+ *   plugins/qa/skills/pipeline/pipelines.json       what the pipeline engine and its hooks follow
  *   plugins/qa/skills/routing/SKILL.md              the route and depth tables, between generated markers
  *   plugins/qa/evals/routing/<case>/                a model eval case for each golden prompt marked `model: true`
  * Usage: node tools/routing/build.mjs [--check]
@@ -17,6 +18,8 @@ import { validateFile } from '../validate-testware/validate-testware.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SOURCE = 'plugins/qa/routing.yaml';
+const PIPELINES = 'plugins/qa/pipelines.yaml';
+const PIPELINES_OUT = 'plugins/qa/skills/pipeline/pipelines.json';
 const GOLDEN = 'tools/routing/golden.yaml';
 const JSON_OUT = 'plugins/qa/skills/routing/routing.json';
 const SKILL = 'plugins/qa/skills/routing/SKILL.md';
@@ -43,11 +46,17 @@ function knownFromRepo() {
  * @param {{agents: string[], skills: Record<string, string | null>}} known
  * @returns {{manifest: object | null, errors: string[]}}
  */
-export function buildManifest(yamlText, known) {
-  const scratch = mkdtempSync(join(tmpdir(), 'routing-'));
-  writeFileSync(join(scratch, 'routing.yaml'), yamlText);
-  const errors = validateFile(join(scratch, 'routing.yaml')).map((error) => `routing.yaml ${error.message}`);
+/** Schema errors for a manifest's text, validated as the file it would be. */
+function schemaErrors(name, text) {
+  const scratch = mkdtempSync(join(tmpdir(), 'manifest-'));
+  writeFileSync(join(scratch, name), text);
+  const errors = validateFile(join(scratch, name)).map((error) => `${name} ${error.message}`);
   rmSync(scratch, { recursive: true, force: true });
+  return errors;
+}
+
+export function buildManifest(yamlText, known) {
+  const errors = schemaErrors('routing.yaml', yamlText);
   if (errors.length > 0) return { manifest: null, errors };
 
   const data = parse(yamlText);
@@ -72,6 +81,24 @@ export function buildManifest(yamlText, known) {
     return { kind, label, pattern, ...(route !== undefined && { route }) };
   });
   return { manifest: { items, routes, depth: data.depth }, errors };
+}
+
+/**
+ * @param {string} yamlText pipelines.yaml
+ * @param {{agents: string[], skills: Record<string, string | null>}} known
+ * @returns {{manifest: object | null, errors: string[]}}
+ */
+export function buildPipelines(yamlText, known) {
+  const errors = schemaErrors('pipelines.yaml', yamlText);
+  if (errors.length > 0) return { manifest: null, errors };
+  const data = parse(yamlText);
+  for (const { stages } of Object.values(data.pipelines)) {
+    for (const stage of stages) {
+      if (!known.agents.includes(stage.agent)) errors.push(`stage ${stage.id} names agent ${stage.agent}, which does not exist`);
+      if (stage.method && !known.skills[stage.method]) errors.push(`stage ${stage.id} names skill ${stage.method}, which no single plugin has`);
+    }
+  }
+  return { manifest: data, errors };
 }
 
 /** The manifest and golden set from the repo, with every error in either. */
@@ -191,7 +218,14 @@ function generated() {
   let skill = readFileSync(join(ROOT, SKILL), 'utf8');
   skill = replaceBetween(skill, 'routes', renderRoutes(manifest));
   skill = replaceBetween(skill, 'depth', renderDepth(manifest.depth));
-  return { [JSON_OUT]: `${JSON.stringify(manifest, null, 2)}\n`, [SKILL]: skill, ...evalCases(golden, manifest) };
+  const pipelines = buildPipelines(readFileSync(join(ROOT, PIPELINES), 'utf8'), knownFromRepo());
+  if (pipelines.errors.length > 0) throw new Error(pipelines.errors.join('\n'));
+  return {
+    [JSON_OUT]: `${JSON.stringify(manifest, null, 2)}\n`,
+    [SKILL]: skill,
+    [PIPELINES_OUT]: `${JSON.stringify(pipelines.manifest, null, 2)}\n`,
+    ...evalCases(golden, manifest),
+  };
 }
 
 /** Generated files missing or different on disk, and files under the routing evals that nothing generates. */
