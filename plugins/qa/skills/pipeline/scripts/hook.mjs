@@ -16,6 +16,9 @@ import { join } from 'node:path';
 import { activeState, addTokens, advance, autonomyOf, continueDecision, describe, evaluate, ledgerLine, loadPipelines, saveState } from './pipeline.mjs';
 
 const SEND_BACK = 2;
+// A specialist that never reported back stops counting as running after this long.
+const RUNNING_FOR = 2 * 60 * 60 * 1000;
+const stillRunning = (state, now) => (state.running ?? []).filter((entry) => Date.parse(now) - Date.parse(entry.started) < RUNNING_FOR);
 
 /** Total tokens in a transcript, from the usage of each assistant message. */
 function transcriptTokens(path) {
@@ -75,6 +78,8 @@ function handle(input) {
     return context(event, `Alchemist-QA: ${describe(root, state, manifest)} Resume there with the pipeline skill's \`next\`.`);
   }
   if (event === 'SubagentStart') {
+    // Remember the specialist, so Stop waits for it instead of spending the stage's attempts.
+    saveState(root, { ...state, running: [...stillRunning(state, now), { id: input.agent_id ?? input.agent_type, started: now }] });
     const files = paths(root, state).join(', ');
     return context(event, `Alchemist-QA: ${describe(root, state, manifest)} Work item files: ${files}.`);
   }
@@ -82,15 +87,21 @@ function handle(input) {
     const counted = countTokens(state, input.agent_transcript_path);
     const { state: current, missing } = advance(root, counted, manifest, now);
     const stage = manifest.pipelines[current.pipeline].stages.find((candidate) => candidate.id === current.stage);
-    if (current.status !== 'running' || stage.parallel || stage.agent !== agentName(input.agent_type)) return null;
     const entry = current.stages[current.stage];
-    if ((entry.sent_back ?? 0) >= SEND_BACK || evaluate(root, current, stage).met) return null;
-    entry.sent_back = (entry.sent_back ?? 0) + 1;
-    saveState(root, current);
-    return { decision: 'block', reason: `Stage ${stage.id} of ${current.item} is not done. Missing: ${missing.join('; ')}. Finish it before you return.` };
+    const owns = current.status === 'running' && !stage.parallel && stage.agent === agentName(input.agent_type);
+    if (owns && (entry.sent_back ?? 0) < SEND_BACK && !evaluate(root, current, stage).met) {
+      entry.sent_back = (entry.sent_back ?? 0) + 1;
+      saveState(root, current);
+      return { decision: 'block', reason: `Stage ${stage.id} of ${current.item} is not done. Missing: ${missing.join('; ')}. Finish it before you return.` };
+    }
+    const id = input.agent_id ?? input.agent_type;
+    saveState(root, { ...current, running: stillRunning(current, now).filter((running) => running.id !== id) });
+    return null;
   }
   if (event === 'Stop') {
     if (!drives(input.transcript_path)) return null;
+    // A specialist is still working: the session waits for it, and that is not a failed attempt at the stage.
+    if (stillRunning(state, now).length > 0) return null;
     const decision = continueDecision(root, countTokens(state, input.transcript_path), manifest, { autonomy: autonomyOf(root), now });
     return decision.block ? { decision: 'block', reason: decision.reason } : null;
   }

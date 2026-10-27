@@ -16,9 +16,9 @@ qa/
   basis/<id>.acceptance.md  Given/When/Then scenarios, proposed to the owner
   cases/<id>.md           test cases designed for that work item
   charters/<id>-<n>.md    exploratory session charters and notes
-  runs/<time>-<capability>.json   results of one run (Jest-format JSON or JUnit XML)
+  runs/<time>-<capability>.json   results of one run: slim JSON once the bookkeeping hook has run, or JUnit XML
   runs/<run>.triage.md    why each failure in that run failed
-  runs/latest/            a copy of the latest run per capability
+  runs/latest/            the latest raw report per capability (gitignored by /qa:onboard)
   runs/coverage/          coverage of the latest run with coverage on
   selections/<ref>.md     the regression tests chosen for one change
   defects/D-<n>.md        one defect report each
@@ -27,7 +27,8 @@ qa/
   inbox/request.md        a typed request on its way in, removed once intake-manual has read it
   outbox/                 comments and issues drafted for a person to post
   trace.json              work item -> risk -> case -> test -> result
-  state/<id>.md           the lead's ledger for one work item
+  state/<id>.md           the lead's ledger for one work item, with a line per session from the pipeline hooks
+  state/<id>.pipeline.json  where the work item is in its pipeline: stage, status, time and tokens per stage
 ```
 
 ## Who writes what
@@ -41,7 +42,7 @@ qa/
 | `risk-register.md` | Analyst (`risk-analysis`) | Reviewer | Read by the trace script |
 | `cases/<id>.md` | Analyst (`test-design-blackbox`, `test-design-whitebox`) | Reviewer | `cases.schema.json` and the case table check |
 | `charters/` | Analyst (`exploratory-testing`) | Lead | None: free form |
-| `runs/*.json` | A tool skill's run script | Triager | The tool's own format |
+| `runs/*.json` | A tool skill's run script; the bookkeeping hook slims it to `alchemist-run/1` | Triager | The tool's own format, or the slim run |
 | `runs/<run>.triage.md` | Triager (`failure-triage`) | Reviewer | None: one table |
 | `selections/<ref>.md` | Lead or engineer (`regression-selection`) | Reviewer | None |
 | `defects/D-<n>.md` | Triager (`defect-reporting`) | A person, before it is filed | `defect.schema.json` |
@@ -50,7 +51,8 @@ qa/
 | `inbox/request.md` | The agent running `intake-manual`, with its Write tool | `intake-manual` script, which removes it once the basis file holds the request | None: a `Title:` line, optional `Origin:` and `Type:` lines, a blank line, then the request |
 | `outbox/` | `intake-github` write-back script | A person, who posts it | None |
 | `trace.json` | `traceability` script, after cases, runs, or defects change | Manager | `trace.schema.json` |
-| `state/<id>.md` | Lead | A person | None |
+| `state/<id>.md` | Lead, and the pipeline hooks at the end of each session | A person | None |
+| `state/<id>.pipeline.json` | `pipeline` skill script and the pipeline hooks | The hooks and the lead | None: written only by the script |
 
 Each skill's template, in its `templates/` folder, is the authoritative shape of the file it writes.
 

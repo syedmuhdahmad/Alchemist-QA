@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { finalReply, grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
+import { armArgs, finalReply, grade, ISOLATED, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -190,4 +190,13 @@ test('the final reply falls back to the stream when the transcript cannot be rea
   writeFileSync(transcriptPath('/tmp/ws', 's2', home), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'From the transcript.' }] } }));
   assert.equal(finalReply(other, '/tmp/ws', home), 'From the transcript.');
   assert.equal(finalReply({ lastMessage: 'Only the stream.' }, '/tmp/ws', home), 'Only the stream.', 'no session id');
+});
+
+test('a graded run loads only the plugins under test: no user settings, hooks, or MCP servers', () => {
+  const args = armArgs({ allowedTools: ['Read', 'Skill'] }, ['/p/qa'], 2);
+  assert.deepEqual(ISOLATED, ['--setting-sources', 'project,local', '--strict-mcp-config']);
+  assert.ok(args.join(' ').includes('--setting-sources project,local --strict-mcp-config'));
+  assert.ok(args.join(' ').includes('--plugin-dir /p/qa'));
+  assert.ok(args.join(' ').includes('--allowedTools Read Skill'));
+  assert.ok(args.join(' ').includes('--max-budget-usd 2'));
 });

@@ -13,7 +13,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseStream } from '../eval-headless/eval-headless.mjs';
+import { ISOLATED, parseStream } from '../eval-headless/eval-headless.mjs';
 import { APPS, loadKey, matchDefects, mutationScore, rates, readDefects, ROOT, sandbox } from './score.mjs';
 
 const PROMPT = [
@@ -40,6 +40,7 @@ function runLead(dir, app, budget) {
     '--verbose',
     '--max-budget-usd',
     String(budget),
+    ...ISOLATED,
     '--allowedTools',
     'Agent Read Glob Grep Write Edit Bash Skill',
   ];

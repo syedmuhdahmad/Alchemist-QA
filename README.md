@@ -4,7 +4,7 @@ A QA company for [Claude Code](https://claude.com/claude-code). Give it a work i
 
 Its methods follow the ISTQB syllabi. Its tools are open source only. It never edits your product code.
 
-> **Status: phase 1.** The department has its six staff agents, twelve method skills from the CTFL syllabus, unit and component testing for React web and React Native, GitHub Issues intake, and `/qa:onboard`. It works one job per request, and a person reviews everything before it leaves the project. Hooks and unattended pipelines come in phase 2. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
+> **Status: phase 2.** The department has its six staff agents, twelve method skills from the CTFL syllabus, unit and component testing for React web and React Native, GitHub Issues intake, `/qa:onboard`, routing hints, and the `feature` pipeline, which hooks carry through unattended at autonomy L1. A person reviews everything before it leaves the project. End-to-end testing comes in phase 3. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
 
 ## Install
 
@@ -35,6 +35,8 @@ claude --agent qa:qa-lead
 and ask it to test an issue, such as "take #12 through testing". With no tracker item, name a risk from the register or describe the request, such as "test risk R-product-1". `/qa:about` lists everything the installed version can do.
 
 In a project with `qa/profile.yaml`, a hook adds a routing hint to each prompt that matches a route in [`plugins/qa/routing.yaml`](plugins/qa/routing.yaml), such as "Write test cases for the promo code field" going to the test analyst. It matches keywords in plain code, never calls a model, and only advises: the agent still decides.
+
+With `autonomy: L1` in `qa/profile.yaml`, the lead carries a work item through the `feature` pipeline on its own: hooks check each stage's files, hand each specialist its inputs, send it back when its output is missing, and stop after three tries at one stage. At `L0`, the default, the lead runs one step per request and the hooks only report where the work item stands.
 
 | Plugin | What it adds |
 | --- | --- |

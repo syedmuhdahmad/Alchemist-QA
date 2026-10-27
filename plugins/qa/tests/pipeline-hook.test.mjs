@@ -87,6 +87,16 @@ test('at L1 the session driving the pipeline is sent on; another session, or L0,
   assert.equal(run(project({ autonomy: 'L0' }), { hook_event_name: 'Stop' }), null);
 });
 
+test('while a specialist the session started is still working, Stop neither sends it on nor counts an attempt', () => {
+  const root = project();
+  run(root, { hook_event_name: 'SubagentStart', agent_type: 'qa:test-manager', agent_id: 'a1' });
+  for (let time = 1; time <= 4; time += 1) assert.equal(run(root, { hook_event_name: 'Stop' }), null, `stop ${time}`);
+  assert.equal(state(root).stages.analysis.attempts, 0);
+  assert.equal(state(root).status, 'running');
+  assert.equal(run(root, { hook_event_name: 'SubagentStop', agent_type: 'qa:test-manager', agent_id: 'a1' }), null);
+  assert.equal(run(root, { hook_event_name: 'Stop' }).decision, 'block', 'once it has returned, the session is sent on again');
+});
+
 test('the end of a session adds a ledger line with time per stage', () => {
   const root = project({ files: { 'qa/state/12.md': '- 10:00 1. Intake: done\n' } });
   assert.equal(run(root, { hook_event_name: 'SessionEnd', reason: 'other' }), null);

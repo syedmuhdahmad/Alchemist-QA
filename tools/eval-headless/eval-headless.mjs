@@ -186,14 +186,26 @@ export function finalReply(run, workspace, home = homedir()) {
  * Runs one arm of a case in `workspace`: the fixture, then `claude -p` with the given plugin folders.
  * @returns {Promise<{uses: {name: string, input: object}[], lastMessage: string, costUsd: number}>}
  */
+/**
+ * Flags that keep a graded run to the plugins under test: the person's own settings, plugins, hooks, and MCP servers
+ * would change what the agent sees and does, and make results depend on whose machine ran them.
+ */
+export const ISOLATED = ['--setting-sources', 'project,local', '--strict-mcp-config'];
+
+/** The `claude -p` arguments for one arm of a case. */
+export function armArgs(testCase, pluginDirs, budgetUsd) {
+  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--max-budget-usd', String(budgetUsd), ...ISOLATED];
+  for (const dir of pluginDirs) args.push('--plugin-dir', dir);
+  if (testCase.allowedTools.length > 0) args.push('--allowedTools', testCase.allowedTools.join(' '));
+  return args;
+}
+
 export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
   if (testCase.fixture) {
     const fixture = spawnSync('bash', [testCase.fixture], { cwd: workspace, encoding: 'utf8' });
     if (fixture.status !== 0) throw new Error(`fixture failed: ${fixture.stderr}`);
   }
-  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--max-budget-usd', String(budgetUsd)];
-  for (const dir of pluginDirs) args.push('--plugin-dir', dir);
-  if (testCase.allowedTools.length > 0) args.push('--allowedTools', testCase.allowedTools.join(' '));
+  const args = armArgs(testCase, pluginDirs, budgetUsd);
   return new Promise((resolvePromise) => {
     const child = spawn('claude', args, { cwd: workspace, stdio: ['pipe', 'pipe', 'ignore'] });
     const timer = setTimeout(() => child.kill(), testCase.timeoutSeconds * 2 * 1000);

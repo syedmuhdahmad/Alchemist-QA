@@ -25,6 +25,12 @@ Phase 1: method and staff.
 - Routing manifest `plugins/qa/routing.yaml`: 17 routes, the work-item ids the department recognises, and how deeply each risk level is tested. `tools/routing/build.mjs` generates the `routing` skill's tables, the hook's `routing.json`, and the routing evals from it, and the tests fail while they are out of step (#31).
 - A `UserPromptSubmit` hook adds a routing hint to a matching prompt in a project with `qa/profile.yaml`. It matches in plain code, never blocks a prompt, and only advises (#32).
 - Routing golden set `tools/routing/golden.yaml`: CI fails when fewer than 95% of its prompts route as expected. A model eval case per route checks how Claude routes, run locally (#37).
+- Pipeline engine and the `feature` pipeline (`plugins/qa/pipelines.yaml`): each stage is done when named checks hold on disk, and the state lives in `qa/state/<file>.pipeline.json`. The lead preloads the new `pipeline` skill, starts the pipeline after intake, and runs `next` after each step (#33, #36).
+- Pipeline hooks. `SessionStart` resumes, and `SubagentStart` hands a specialist its stage and paths. `SubagentStop` sends a stage's own specialist back with what is missing, at most twice. `Stop` carries the driving session on at autonomy L1 or above, at most three times per stage. `PreCompact` and `SessionEnd` checkpoint and write the ledger (#33, #34).
+- A `PostToolUse` hook slims new runs, updates `qa/trace.json`, and queues failures for triage, with no agent action (#35).
+- Runs stay small: a slim run keeps failures and case-linked tests, and the raw report only as `runs/latest/` (#113).
+- The ledger records time and tokens per stage, and plans estimate the agent run in `estimate_agent_minutes` and `estimate_agent_usd` (#112).
+- Seeded-defect scoring: `tools/scoring/seeded.mjs` runs the department on a benchmark app, unattended, and records detection, false defects, Stryker's mutation score, flaky failures, cost, and time. `tools/scoring/scorecard.mjs` publishes `docs/scorecard.md` and the README scorecard (#38, #39, #40).
 
 ### Changed
 
