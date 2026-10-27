@@ -34,9 +34,11 @@ claude --agent qa:qa-lead
 
 and ask it to test an issue, such as "take #12 through testing". With no tracker item, name a risk from the register or describe the request, such as "test risk R-product-1". `/qa:about` lists everything the installed version can do.
 
+In a project with `qa/profile.yaml`, a hook adds a routing hint to each prompt that matches a route in [`plugins/qa/routing.yaml`](plugins/qa/routing.yaml), such as "Write test cases for the promo code field" going to the test analyst. It matches keywords in plain code, never calls a model, and only advises: the agent still decides.
+
 | Plugin | What it adds |
 | --- | --- |
-| `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `intake-manual` (a risk from the register or a request typed in chat, when no tracker holds the item), `/qa:onboard`, and `/qa:about`. |
+| `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `intake-manual` (a risk from the register or a request typed in chat, when no tracker holds the item), `routing` with its prompt hook, `/qa:onboard`, and `/qa:about`. |
 | `qa-web` | `vitest`: unit and component tests for React web with Vitest and Testing Library. |
 | `qa-mobile` | `jest-native`: unit and component tests for bare React Native with Jest and React Native Testing Library. |
 
@@ -79,7 +81,13 @@ npm ci
 npm run check
 ```
 
-`npm run check` runs the tests, the skill linter, the testware validator, and the Markdown linter. See [CONTRIBUTING.md](CONTRIBUTING.md).
+`npm run check` runs the tests, the skill linter, the testware validator, and the Markdown linter. After changing `plugins/qa/routing.yaml` or `tools/routing/golden.yaml`, run `node tools/routing/build.mjs`: it regenerates the routing skill's tables, the hook's `routing.json`, and the routing evals, and the tests fail until you do. The golden set must route at least 95% of its prompts as expected. To check how Claude itself routes, run the routing evals locally, at about $0.30 a case:
+
+```bash
+node tools/eval-headless/cli.mjs plugins/qa --case routing- --no-baseline
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence and acknowledgement
 

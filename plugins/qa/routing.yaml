@@ -1,0 +1,128 @@
+# The department's routing manifest: the single source for the routing hook, the routing skill's tables,
+# and the routing evals. After a change, run `node tools/routing/build.mjs`; CI fails while they are out of step.
+# Signals are matched case-insensitively as whole words. The route with the most matching signals wins;
+# a tie goes to the longer match, and an exact tie is offered as a choice.
+
+items:
+  - kind: github
+    label: GitHub issue
+    pattern: '(?<![\w&/])#\d+\b'
+    route: lead.github
+  - kind: azure
+    label: Azure DevOps work item
+    pattern: '\bAB#\d+\b'
+  - kind: request
+    label: work item with no tracker
+    pattern: '\bREQ-\d+\b'
+  - kind: risk
+    label: risk from the register
+    pattern: '\bR-(?:[A-Za-z0-9]+-)+\d+\b'
+    route: lead.manual
+  - kind: jira
+    label: Jira issue
+    pattern: '\b(?!REQ-|TC-|AB-)[A-Z][A-Z0-9]+-\d+\b(?!-)'
+
+routes:
+  - id: lead.github
+    activity: analysis
+    signals: ["github issue", "this issue", "the issue", "through testing", "take it through", "up to the completion report", "up to the report"]
+    agent: qa-lead
+    method: intake-github
+  - id: lead.manual
+    activity: analysis
+    signals: ["no ticket", "there's no ticket", "not in a tracker", "no tracker", "test risk", "test the risk", "request from the owner", "up to the completion report", "up to the report"]
+    agent: qa-lead
+    method: intake-manual
+  - id: analysis.basis-review
+    activity: analysis
+    signals: ["testable", "is this testable", "testability", "ready to test", "review this story", "review the story", "review the requirements", "ambiguous"]
+    agent: test-analyst
+    method: test-basis-review
+  - id: analysis.risk
+    activity: analysis
+    signals: ["what could go wrong", "product risks", "risk analysis", "rate the risks", "risks of", "risks for", "how risky"]
+    agent: test-analyst
+    method: risk-analysis
+  - id: analysis.acceptance
+    activity: analysis
+    signals: ["given when then", "given/when/then", "acceptance scenarios", "gherkin", "write acceptance criteria", "propose acceptance criteria"]
+    agent: test-analyst
+    method: acceptance-criteria
+  - id: design.blackbox
+    activity: design
+    signals: ["test cases for", "design test cases", "design the test cases", "boundary values", "boundary value", "equivalence partitions", "decision table", "state transitions", "edge cases"]
+    agent: test-analyst
+    method: test-design-blackbox
+  - id: design.whitebox
+    activity: design
+    signals: ["coverage gaps", "code coverage", "uncovered branches", "branch coverage", "statement coverage", "not covered by tests", "lines are not covered"]
+    agent: test-analyst
+    method: test-design-whitebox
+  - id: design.exploratory
+    activity: design
+    signals: ["exploratory", "explore", "charter", "session-based", "test tour"]
+    agent: test-analyst
+    method: exploratory-testing
+  - id: planning.plan
+    activity: planning
+    signals: ["test plan", "plan the testing", "plan testing", "estimate the testing", "how long will testing take", "entry and exit criteria", "exit criteria for"]
+    agent: test-manager
+    method: test-planning
+  - id: implementation.unit-web
+    activity: implementation
+    level: component
+    signals: ["automate", "automated tests for", "write the tests", "unit tests", "component tests", "web app", "react component", "vitest"]
+    agent: automation-engineer
+    method: vitest
+    capability: unit-web
+  - id: implementation.unit-mobile
+    activity: implementation
+    level: component
+    signals: ["automate", "automated tests for", "write the tests", "unit tests", "component tests", "mobile", "mobile app", "react native", "screen component"]
+    agent: automation-engineer
+    method: jest-native
+    capability: unit-mobile
+  - id: execution.triage
+    activity: execution
+    signals: ["tests failed", "test failed", "failing tests", "failing test", "test failures", "make the tests pass", "make it pass", "flaky", "triage", "why did"]
+    agent: failure-triager
+    method: failure-triage
+  - id: execution.defect
+    activity: execution
+    signals: ["defect report", "bug report", "report the defect", "report this bug", "file a bug", "write up the bug", "write up the defect"]
+    agent: failure-triager
+    method: defect-reporting
+  - id: execution.regression
+    activity: execution
+    signals: ["which tests to run", "which tests should i run", "what should i rerun", "tests to rerun", "regression", "confirmation test", "after this change", "changed files"]
+    agent: automation-engineer
+    method: regression-selection
+  - id: design.review
+    activity: design
+    signals: ["review the test cases", "review these test cases", "review the tests", "review these tests", "check the test cases", "review the testware", "independent review"]
+    agent: test-reviewer
+    method: test-design-blackbox
+  - id: completion.report
+    activity: completion
+    signals: ["test report", "completion report", "progress report", "can we stop testing", "are we done testing", "exit criteria met", "ready to release", "summary of the testing"]
+    agent: test-manager
+    method: test-reporting
+  - id: monitoring.trace
+    activity: monitoring
+    signals: ["traceability", "what is covered", "what's covered", "which risks have no", "no test case", "no tests", "update the trace", "trace.json"]
+    agent: test-manager
+    method: traceability
+
+depth:
+  low:
+    techniques: [equivalence-partitioning]
+    review: none
+    devices: "Smoke: one browser and one Android phone"
+  medium:
+    techniques: [equivalence-partitioning, boundary-value, decision-table, error-guessing]
+    review: sampled
+    devices: "Regression: a phone and a tablet"
+  high:
+    techniques: [equivalence-partitioning, boundary-value, decision-table, error-guessing, state-transition, exploratory]
+    review: all
+    devices: "Full portfolio: browsers, Android, iOS, tablets, and the non-functional packs"

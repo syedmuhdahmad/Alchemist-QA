@@ -6,6 +6,39 @@
   "required": ["routes"],
   "additionalProperties": false,
   "properties": {
+    "items": {
+      "description": "Work-item ids the matcher recognises. An item with a route picks it when no signal matches.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "label", "pattern"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "pattern": "^[a-z]+$" },
+          "label": { "type": "string", "minLength": 1 },
+          "pattern": { "description": "A JavaScript regular expression, applied case-sensitively.", "type": "string", "minLength": 1 },
+          "route": { "type": "string" }
+        }
+      }
+    },
+    "depth": {
+      "description": "How deeply to test at each risk level (CTFL 5.2): techniques, testware review, and devices.",
+      "type": "object",
+      "required": ["low", "medium", "high"],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(low|medium|high)$": {
+          "type": "object",
+          "required": ["techniques", "review", "devices"],
+          "additionalProperties": false,
+          "properties": {
+            "techniques": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "review": { "enum": ["none", "sampled", "all"] },
+            "devices": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
     "routes": {
       "type": "array",
       "minItems": 1,

@@ -1,0 +1,167 @@
+# Golden set for routing: prompts with the route the plain-code matcher must pick.
+# expect: a route id, a list when the prompt is honestly ambiguous (the hint must offer exactly those), or null
+# when no hint should be given. model: true also makes it a model eval case in plugins/qa/evals/routing/.
+# CI fails when fewer than 95% route as expected. Add a prompt here whenever a real one routes wrongly.
+
+# Bringing a work item in
+- prompt: "take #12 through testing"
+  expect: lead.github
+  model: true
+- prompt: "Can you test GitHub issue #48 up to the completion report?"
+  expect: lead.github
+- prompt: "run #7 through the whole department"
+  expect: lead.github
+- prompt: "Use the qa-lead agent to test risk R-product-1 in qa/risk-register.md at unit level, up to the completion report."
+  expect: lead.manual
+  model: true
+- prompt: "There's no ticket for this, it's a request from the owner: check the newsletter sign-up before Friday."
+  expect: lead.manual
+- prompt: "R-12-3 needs testing please"
+  expect: lead.manual
+
+# Analysis
+- prompt: "Is this story testable? The checkout must be fast."
+  expect: analysis.basis-review
+  model: true
+- prompt: "review the requirements for the coupon feature before we design anything"
+  expect: analysis.basis-review
+- prompt: "Is #31 ready to test?"
+  expect: analysis.basis-review
+- prompt: "What could go wrong with the new refund flow?"
+  expect: analysis.risk
+  model: true
+- prompt: "do a risk analysis of the password reset feature"
+  expect: analysis.risk
+- prompt: "how risky is the change to the tax calculation?"
+  expect: analysis.risk
+- prompt: "Write acceptance criteria for the wishlist story as Given/When/Then"
+  expect: analysis.acceptance
+  model: true
+- prompt: "turn this story into gherkin acceptance scenarios"
+  expect: analysis.acceptance
+
+# Design
+- prompt: "Write test cases for the promo code field"
+  expect: design.blackbox
+  model: true
+- prompt: "what are the boundary values for the quantity input (1 to 99)?"
+  expect: design.blackbox
+- prompt: "I need a decision table for the shipping rules"
+  expect: design.blackbox
+- prompt: "think of edge cases for the date picker"
+  expect: design.blackbox
+- prompt: "design test cases for #12"
+  expect: design.blackbox
+- prompt: "Coverage shows uncovered branches in cart.ts, add cases for them"
+  expect: design.whitebox
+  model: true
+- prompt: "what code coverage gaps do we have in the checkout module?"
+  expect: design.whitebox
+- prompt: "Prepare an exploratory charter for the search page"
+  expect: design.exploratory
+  model: true
+- prompt: "I want to explore the onboarding flow for an hour, set up a session"
+  expect: design.exploratory
+
+# Planning
+- prompt: "Write a test plan for the 2.0 release"
+  expect: planning.plan
+  model: true
+- prompt: "how long will testing take for the payments rework?"
+  expect: planning.plan
+- prompt: "set entry and exit criteria for #12"
+  expect: planning.plan
+
+# Automation
+- prompt: "Automate the cases for the cart in the web app"
+  expect: implementation.unit-web
+  model: true
+- prompt: "write the tests for the PriceTag react component"
+  expect: implementation.unit-web
+- prompt: "add vitest tests for the coupon form"
+  expect: implementation.unit-web
+- prompt: "automate the cases for the mobile app's login screen"
+  expect: implementation.unit-mobile
+  model: true
+- prompt: "write component tests for the React Native cart screen component"
+  expect: implementation.unit-mobile
+- prompt: "automate the test cases"
+  expect: [implementation.unit-web, implementation.unit-mobile]
+- prompt: "write unit tests"
+  expect: [implementation.unit-web, implementation.unit-mobile]
+
+# Execution
+- prompt: "Three tests failed after my change, what happened?"
+  expect: execution.triage
+  model: true
+- prompt: "make the tests pass"
+  expect: execution.triage
+- prompt: "this test is flaky, it fails one run in five"
+  expect: execution.triage
+- prompt: "why did the checkout test fail on CI?"
+  expect: execution.triage
+- prompt: "Write a defect report for the discount bug we found"
+  expect: execution.defect
+  model: true
+- prompt: "file a bug for the broken sort order"
+  expect: execution.defect
+- prompt: "Which tests should I run after this change to the cart?"
+  expect: execution.regression
+  model: true
+- prompt: "pick the regression tests for PR 88"
+  expect: execution.regression
+- prompt: "these are the changed files, what should I rerun?"
+  expect: execution.regression
+
+# Review, report, trace
+- prompt: "Review the test cases the analyst wrote for #12"
+  expect: design.review
+  model: true
+- prompt: "can someone do an independent review of the testware?"
+  expect: design.review
+- prompt: "Can we stop testing #12? Give me the completion report"
+  expect: completion.report
+  model: true
+- prompt: "send me a progress report for the release"
+  expect: completion.report
+- prompt: "are we ready to release?"
+  expect: completion.report
+- prompt: "Which risks have no test cases?"
+  expect: monitoring.trace
+  model: true
+- prompt: "what's covered for #12 so far?"
+  expect: monitoring.trace
+- prompt: "update the trace after the last run"
+  expect: monitoring.trace
+
+# Work-item ids with no route of their own
+- prompt: "take AB#123 through testing"
+  expect: lead.github
+- prompt: "look at PROJ-45"
+  expect: null
+- prompt: "REQ-3 is done, thanks"
+  expect: null
+
+# Nothing to route: the hook stays quiet
+- prompt: "fix the typo in the README"
+  expect: null
+- prompt: "yes, go ahead"
+  expect: null
+- prompt: "refactor the cart reducer into smaller functions"
+  expect: null
+- prompt: "how do I rebase onto main?"
+  expect: null
+- prompt: "run npm install"
+  expect: null
+- prompt: "what does this error mean: ENOENT"
+  expect: null
+- prompt: "/qa:onboard"
+  expect: null
+- prompt: "thanks, that's all"
+  expect: null
+
+# Whole engagements named by the report they end with
+- prompt: "take R-product-2 up to the completion report"
+  expect: lead.manual
+- prompt: "test #12 up to the report"
+  expect: lead.github
