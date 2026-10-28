@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Prints the permission rules /qa:onboard offers for a project's .claude/settings.json, so the department's scripts
- * run without asking each time. Claude Code matches a rule against the command exactly as typed, with `*` for any
- * text, so each rule names one script by its absolute path, in quotes, as the skills run it. A wildcard before the
- * path would also allow `node -e '<any code>' .../pipeline.mjs`.
+ * Prints the permission rules /qa:onboard offers for a project's .claude/settings.json, so the scripts the department
+ * runs most (trace.mjs, pipeline.mjs, and each tool skill's ensure-deps.sh and run.sh) run without asking each time.
+ * Claude Code matches a rule against the command exactly as typed, with `*` for any text, so each rule names one
+ * script by its absolute path, in quotes, as the skills run it. A wildcard before the path would also allow
+ * `node -e '<any code>' .../pipeline.mjs`.
  * Usage: node permission-rules.mjs [--skill-dir <dir>]...
  *   --skill-dir  the directory of a tool skill the profile uses, such as qa-web:vitest; adds its ensure-deps.sh and
  *                run.sh

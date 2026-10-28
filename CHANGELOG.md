@@ -38,6 +38,7 @@ Phase 1: method and staff.
 - The GitHub intake script moved into the `intake-github` skill.
 - `test-reporting` judges the exit criteria without the provisional cases, then says `not-met`, `awaiting-owner`, or `met`, in that order. A failure classed `question` alone no longer makes a report `not-met`. A report without a plan is never `met` (#111, #115).
 - Failure triage classes a failure `question` only while its assumption is open.
+- `test-basis-review` records the owner's rule for a contradiction they settle as a corrected assumption, and sets the verdict again, so a `not-ready` review becomes `ready-with-assumptions` once every contradiction is settled. Before, it stayed `not-ready`, and the pipeline waited for good.
 - `qa-lead` routes a risk or a typed request to `intake-manual`, always leaves a report on disk when it stops early, and sends the owner's answers to the analyst (#110, #111).
 
 ### Fixed

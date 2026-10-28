@@ -36,8 +36,8 @@ Check one work item for testability and record the result in a file that the nex
 4. Number the findings F1, F2, and so on.
 5. For each finding that is not a `contradiction` or a `note`, write one assumption that makes it testable, numbered A1, A2, and so on, naming the finding it covers and the status `open`: `A1 (covers F1, open)`. An assumption is the most likely reading for this product, written so the owner can confirm or correct it. For `missing-criteria`, write assumptions for the main success path, the main failure path, and any limit the story implies.
 6. Set the verdict:
-   - `not-ready` when any finding is a `contradiction`. No assumption can settle two statements that cannot both hold.
-   - `ready-with-assumptions` when there is no contradiction and at least one finding is not a `note`.
+   - `not-ready` when a finding is a `contradiction` the owner has not settled. No assumption of yours can settle two statements that cannot both hold: only the owner can.
+   - `ready-with-assumptions` when no contradiction is left unsettled and at least one finding is not a `note`.
    - `ready` when every finding is a `note`, or there are none.
 7. Write one question for the owner for each contradiction and each assumption.
 8. Write the file. This stage ends there: the work item stays as it is, and test design is the next stage.
@@ -50,11 +50,12 @@ When the owner answers the questions, in the review file or in their own words p
 1. Write the date of the answer into the assumption's parenthesis:
    - the owner agrees: `A1 (covers F1, confirmed 2026-10-04)`, and the text stays as it is;
    - the owner gives another rule: `A2 (covers F2, corrected 2026-10-04)`, and the text becomes the owner's rule.
-2. Every assumption the owner did not answer gets, or keeps, the status `open`. A review written before statuses existed has none: add `open` to each unanswered one.
-3. In **Questions for the owner**, end each answered question with `(answered <date>)`.
-4. For each corrected assumption, update the expected result of every case in `qa/cases/<id>.md` whose Basis cites it, working the new value out from the corrected text.
-5. Leave the verdict and the findings as they are.
-6. Reply with each assumption's new status, and the ids of the cases whose expected results changed: their tests must be updated and run again.
+2. When the owner settles a contradiction, add an assumption after the last one that states their rule and names the contradiction, with the status `corrected <date>`: `A4 (covers F3, corrected 2026-10-04)`.
+3. Every assumption the owner did not answer gets, or keeps, the status `open`. A review written before statuses existed has none: add `open` to each unanswered one.
+4. In **Questions for the owner**, end each answered question with `(answered <date>)`.
+5. For each corrected assumption, update the expected result of every case in `qa/cases/<id>.md` whose Basis cites it, working the new value out from the corrected text.
+6. Leave the findings as they are, and set the verdict again by step 6 of the review: once the owner has settled every contradiction, a `not-ready` review becomes `ready-with-assumptions`, and test design can start.
+7. Reply with each assumption's new status, the verdict if it changed, and the ids of the cases whose expected results changed: their tests must be updated and run again.
 
 ## Checklist
 
@@ -65,3 +66,4 @@ When the owner answers the questions, in the review file or in their own words p
 - [ ] The verdict follows step 6.
 - [ ] `qa/basis/<id>.review.md` exists, and its frontmatter has `work_item` and `verdict`.
 - [ ] Every assumption has a status: `open`, or the owner's `confirmed <date>` or `corrected <date>`.
+- [ ] Every contradiction the owner settled has an assumption with their rule, and the verdict was set again.

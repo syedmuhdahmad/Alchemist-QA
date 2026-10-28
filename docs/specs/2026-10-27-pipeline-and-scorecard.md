@@ -9,7 +9,7 @@ A work item goes through the `feature` pipeline with no one stepping in. Every s
 ## 1. Runs stay small, and are traced by a hook (#113, #35)
 
 - Tool run scripts still write the raw report: `qa/runs/<time>-<capability>.json`, plus `runs/latest/<capability>.json`.
-- `traceability/scripts/runs.mjs` turns a raw Jest-format report into a slim run in place: `{format: "alchemist-run/1", tool, totals, tests}`. `tests` keeps every failed test with the first line of its message, and every test whose title starts with a case id. All other tests count only in `totals`. The raw report survives only as `runs/latest/<capability>.json`.
+- `traceability/scripts/runs.mjs` turns a raw Jest-format report into a slim run in place: `{format: "alchemist-run/1", tool, totals, tests}`. `tests` keeps every failed test with the first line of its message, and every test whose title names a case id. All other tests count only in `totals`. The raw report survives only as `runs/latest/<capability>.json`.
 - `trace.mjs` reads slim runs, and gives the same case results as it does from the raw reports.
 - A `PostToolUse` hook on Bash, in a project with `qa/profile.yaml`:
   1. slims any raw run;
@@ -45,7 +45,7 @@ A work item goes through the `feature` pipeline with no one stepping in. Every s
   - `SessionStart` tells the session the item, its stage, and what "done" means for that stage, so a new session resumes.
   - `SubagentStart` gives a specialist the paths it needs, the stage, and the exit checks.
   - `SubagentStop` runs the stage's checks when the stopping agent owns the stage. When they fail, it sends the agent back with what is missing, at most twice. It never blocks a parallel stage, because one engineer finishing says nothing about the others.
-  - `Stop` advances past every stage whose checks hold. If stages remain and `qa/profile.yaml` sets `autonomy` to L1 or higher, it sends the lead on to the next stage. Each stage allows at most 3 attempts; then the state says `stopped`, with the reason. A `not-ready` review or open owner questions set `waiting`, and nothing blocks.
+  - `Stop` advances past every stage whose checks hold. If stages remain and `qa/profile.yaml` sets `autonomy` to L1 or higher, it sends the lead on to the next stage. Each stage allows at most 3 attempts; then the state says `stopped`, with the reason. A `not-ready` review sets `waiting`, and nothing blocks. Open owner questions do not: they show in the trace and as the report verdict `awaiting-owner`.
   - `PreCompact` and `SessionEnd` checkpoint the state. `SessionEnd` also adds a ledger line to `qa/state/<file>.md`.
 - **Time and tokens (#112).** Each stage records its elapsed time and its tokens. Tokens are summed from the session transcript and each specialist's transcript. Claude Code does not give hooks a cost, so the ledger records tokens, and the scorecard records cost from headless runs.
 - **Plan estimate (#112).** Plans keep the human-effort estimate and add the agent run: minutes and US dollars, as ranges set by risk level and case count. These go in the optional plan fields `estimate_agent_minutes` and `estimate_agent_usd`.
@@ -61,8 +61,8 @@ A work item goes through the `feature` pipeline with no one stepping in. Every s
   - **cost and time:** from the headless result;
   - **flake:** failures classed `flaky`.
 - **Mutation score (#39).** Stryker runs on the app's `src/lib` with the tests the department wrote, in the sandbox. Its score goes into the same record.
-- **Records.** Each run writes `evals/scorecard/runs/<date>-<app>.json`.
-- **Scorecard.** `tools/scoring/scorecard.mjs` generates `docs/scorecard.md` and a summary block in the README, with one row per model so model versions can be compared. Routing figures come from the golden set and the recorded model run. A test fails while either generated file is out of step with the records.
+- **Records.** Each run writes `evals/scorecard/runs/<date>-<app>-<n>.json`.
+- **Scorecard.** `tools/scoring/scorecard.mjs` generates `docs/scorecard.md` and a summary block in the README, with one row per app and model, so model versions can be compared. Routing figures come from the golden set and the recorded model run. A test fails while either generated file is out of step with the records.
 
 ## 4. The flaky eval (#119)
 

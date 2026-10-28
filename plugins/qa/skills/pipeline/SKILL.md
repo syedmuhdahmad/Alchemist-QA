@@ -18,7 +18,7 @@ A script carries a work item through the stages in `plugins/qa/pipelines.yaml`, 
    node "${CLAUDE_SKILL_DIR}/scripts/pipeline.mjs" start feature --item '<work item id>' --file <file>
    ```
 
-2. It prints the stage the work item is at: the agent, the skill, the checks that end the stage, and what is still missing. Hand that stage to its agent.
+2. It prints the stage the work item is at: the agent, the skill, the checks that end the stage, and what is still missing. Hand that stage to its agent. Running `start` again resumes the engagement and resets nothing; it never restarts a stopped one.
 3. After each step, run:
 
    ```bash
@@ -26,7 +26,7 @@ A script carries a work item through the stages in `plugins/qa/pipelines.yaml`, 
    ```
 
    It moves past every stage whose checks hold, and prints the next one. Do what it names.
-4. When it says **waiting**, tell the person what it waits for, such as the owner's answer to a `not-ready` review, and stop.
+4. When it says **waiting**, tell the person what it waits for, such as the owner's answer to a `not-ready` review, and stop. Once the owner has settled every contradiction and the analyst has recorded it, run `next` again.
 5. When it says **stopped**, a stage failed its checks three times. Tell the person the reason it gives, and stop.
 6. When it says **done**, every stage passed. Reply with the report's path and verdict.
 7. To say where every engagement stands, run `pipeline.mjs status`.
@@ -35,5 +35,5 @@ A script carries a work item through the stages in `plugins/qa/pipelines.yaml`, 
 
 - Quote the work item id: `--item '#12'`. Unquoted, the shell reads `#12` as a comment and the id is lost.
 - A stage is done only when its checks hold on disk. Produce the file a check names; never edit the state file to move on.
-- The testware review stage checks your ledger: add a line to `qa/state/<file>.md` with the review's outcome, such as "6. Review: qa:test-reviewer, no blocking finding".
-- At autonomy L1 or above in `qa/profile.yaml`, the Stop hook sends you on to the next stage, at most three times per stage. At L0 nothing continues by itself: run `next` and carry on.
+- The testware review stage checks your ledger: add a line to `qa/state/<file>.md` that names `qa:test-reviewer` and the review's outcome, such as "6. Review: qa:test-reviewer, no blocking finding".
+- At autonomy L1 or above in `qa/profile.yaml`, the Stop hook sends you on to the next stage, at most three times per stage. At L0 you are never sent on: run `next` and carry on. At any level, a specialist that returns with its stage's output missing is sent back, at most twice.

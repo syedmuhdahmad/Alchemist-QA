@@ -36,7 +36,7 @@ and ask it to test an issue, such as "take #12 through testing". With no tracker
 
 In a project with `qa/profile.yaml`, a hook adds a routing hint to each prompt that matches a route in [`plugins/qa/routing.yaml`](plugins/qa/routing.yaml), such as "Write test cases for the promo code field" going to the test analyst. It matches keywords in plain code, never calls a model, and only advises: the agent still decides.
 
-With `autonomy: L1` in `qa/profile.yaml`, the lead carries a work item through the `feature` pipeline on its own: hooks check each stage's files, hand each specialist its inputs, send it back when its output is missing, and stop after three tries at one stage. At `L0`, the default, the lead runs one step per request and the hooks only report where the work item stands.
+With `autonomy: L1` in `qa/profile.yaml`, the lead carries a work item through the `feature` pipeline on its own: hooks check each stage's files, hand each specialist its inputs, send it back when its output is missing, and stop after three tries at one stage. At `L0`, the default, the lead runs one step per request and is never sent on to the next stage; a specialist that returns with its output missing is still sent back.
 
 | Plugin | What it adds |
 | --- | --- |

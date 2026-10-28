@@ -5,7 +5,7 @@
  *   trace.mjs update   [--root <dir>]                         rebuild qa/trace.json from the qa/ folder and the tests
  *   trace.mjs coverage [--root <dir>] [--item <id>] [--strict] print the gaps; --strict exits 1 when there are any
  *
- * Sources: qa/risk-register.md, qa/cases/*.md, test files that name a case id (TC-<item>-<nn>) in a test title,
+ * Sources: qa/risk-register.md, qa/cases/*.md, test files that name a case id (TC-<item>-<nn>),
  * result files in qa/runs/ (Jest-format JSON or JUnit XML, oldest first), qa/defects/*.md, and the assumptions
  * in qa/basis/*.review.md with the owner's answers so far.
  * No npm dependencies: this runs in any project.

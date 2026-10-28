@@ -119,14 +119,14 @@ White-box design adds a `## Coverage gaps` section after the table.
 
 ## How tests link to cases
 
-A test is linked to a case when its title starts with the case id, such as `it('TC-12-01 ships free at 50.00')`. Results are linked the same way: the trace script reads every result file in `runs/`, oldest first, so the latest run decides each case's result. When several tests in one run carry the same case id, the case takes the worst of them: failed, then not run, then passed. The `## Product: first pass` section that `/qa:onboard` drafts in `risk-register.md` is not a work item, and the trace skips it. A failed case points at the defect report whose `cases` list names it.
+A test file is linked to a case when it names the case id, and a test result counts for a case when the id appears in the test's title, such as `it('TC-12-01 ships free at 50.00')`. The trace script reads every result file in `runs/`, oldest first, so the latest run decides each case's result. When several tests in one run carry the same case id, the case takes the worst of them: failed, then not run, then passed. The `## Product: first pass` section that `/qa:onboard` drafts in `risk-register.md` is not a work item, and the trace skips it. A failed case points at the defect report whose `cases` list names it.
 
 ## Defects, plans, and reports
 
 | File | Frontmatter | Notes |
 | --- | --- | --- |
 | `defects/D-<n>.md` | `id`, `title`, `work_item`, `cases`, `severity` (`critical`, `major`, `minor`, `trivial`), `status` (`draft`, `approved`, `filed`) | Only a person moves a report from `draft` to `approved`. Only approved reports are drafted as tracker issues. |
-| `plans/<id>.md` | `work_item`, `estimate_hours` | Exit criteria must be checkable from the trace or the defect files. |
+| `plans/<id>.md` | `work_item`, `estimate_hours`; optional `estimate_agent_minutes` and `estimate_agent_usd`, each `[low, high]` | Exit criteria must be checkable from the trace or the defect files. |
 | `reports/<id>.md` | `work_item`, `kind` (`progress` or `completion`), and on a completion report `exit_criteria` (`met`, `not-met`, or `awaiting-owner`); with `awaiting-owner`, `awaiting` lists the open assumptions | Every number comes from the trace or the defect files. A report without a plan is never `met`. |
 
 ### The verdict
