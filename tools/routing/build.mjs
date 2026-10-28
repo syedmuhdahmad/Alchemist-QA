@@ -41,11 +41,6 @@ function knownFromRepo() {
   return { agents, skills };
 }
 
-/**
- * @param {string} yamlText routing.yaml
- * @param {{agents: string[], skills: Record<string, string | null>}} known
- * @returns {{manifest: object | null, errors: string[]}}
- */
 /** Schema errors for a manifest's text, validated as the file it would be. */
 function schemaErrors(name, text) {
   const scratch = mkdtempSync(join(tmpdir(), 'manifest-'));
@@ -55,6 +50,11 @@ function schemaErrors(name, text) {
   return errors;
 }
 
+/**
+ * @param {string} yamlText routing.yaml
+ * @param {{agents: string[], skills: Record<string, string | null>}} known
+ * @returns {{manifest: object | null, errors: string[]}}
+ */
 export function buildManifest(yamlText, known) {
   const errors = schemaErrors('routing.yaml', yamlText);
   if (errors.length > 0) return { manifest: null, errors };

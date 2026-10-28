@@ -106,7 +106,7 @@ export async function judgeWithHaiku(criteria, text) {
   return judgeVerdict(spawnSync('claude', JUDGE_ARGS, { input: question, encoding: 'utf8', timeout: 300_000 }));
 }
 
-/** A verdict from the judge's process result. A judge that failed to run is not a FAIL verdict. */
+/** A verdict from the judge's process result. A judge that failed to run fails the grader, saying the judge failed. */
 export function judgeVerdict(result) {
   if (result.error || result.status !== 0) {
     return { passed: false, why: `judge failed: ${result.error?.message ?? `exit ${result.status}`}` };
@@ -115,12 +115,18 @@ export function judgeVerdict(result) {
   return { passed: answer.startsWith('PASS'), why: answer.split('\n').pop().slice(0, 200) };
 }
 
-/** The tool calls, the final reply, the cost, and the session id, from `claude -p --output-format stream-json` output. */
+/**
+ * From `claude -p --output-format stream-json` output: the tool calls, the final reply, the cost, whether the run
+ * finished (a result that is not an error), how it stopped if it ended in an error, the session id, and the model.
+ */
 export function parseStream(output) {
   const uses = [];
   let lastMessage = '';
   let costUsd = 0;
+  let finished = false;
+  let stop;
   let sessionId;
+  let model;
   for (const line of output.split('\n').filter((l) => l.startsWith('{'))) {
     let event;
     try {
@@ -129,6 +135,7 @@ export function parseStream(output) {
       continue; // A line cut off when the run was killed at its timeout.
     }
     sessionId ??= event.session_id;
+    if (event.type === 'system' && event.subtype === 'init') model ??= event.model;
     if (event.type === 'assistant') {
       for (const block of event.message?.content ?? []) {
         if (block.type === 'tool_use') uses.push({ name: block.name, input: block.input });
@@ -138,9 +145,11 @@ export function parseStream(output) {
     if (event.type === 'result') {
       costUsd = event.total_cost_usd ?? 0;
       lastMessage = event.result || lastMessage;
+      finished = !event.is_error;
+      stop = event.is_error ? (event.subtype ?? 'an error') : undefined;
     }
   }
-  return { uses, lastMessage, costUsd, ...(sessionId && { sessionId }) };
+  return { uses, lastMessage, costUsd, finished, ...(stop && { stop }), ...(sessionId && { sessionId }), ...(model && { model }) };
 }
 
 /** Where Claude Code keeps a session's transcript: a folder named after the working directory, `/` and `.` as `-`. */
@@ -183,10 +192,6 @@ export function finalReply(run, workspace, home = homedir()) {
 }
 
 /**
- * Runs one arm of a case in `workspace`: the fixture, then `claude -p` with the given plugin folders.
- * @returns {Promise<{uses: {name: string, input: object}[], lastMessage: string, costUsd: number}>}
- */
-/**
  * Flags that keep a graded run to the plugins under test: the person's own settings, plugins, hooks, and MCP servers
  * would change what the agent sees and does, and make results depend on whose machine ran them.
  */
@@ -203,6 +208,10 @@ export function armArgs(testCase, pluginDirs, budgetUsd) {
   return args;
 }
 
+/**
+ * Runs one arm of a case in `workspace`: the fixture, then `claude -p` with the given plugin folders.
+ * @returns {Promise<ReturnType<typeof parseStream>>}
+ */
 export function runArm(testCase, workspace, pluginDirs, budgetUsd) {
   if (testCase.fixture) {
     const fixture = spawnSync('bash', [testCase.fixture], { cwd: workspace, encoding: 'utf8' });

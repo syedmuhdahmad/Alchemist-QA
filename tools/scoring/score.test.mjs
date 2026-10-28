@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ISOLATED } from '../eval-headless/eval-headless.mjs';
 import {
-  CLASSIFY_ARGS,
   classifyPrompt,
+  classifyWithHaiku,
+  leadRunProblem,
   loadKey,
   matchDefects,
   mutationScore,
@@ -20,8 +21,45 @@ import {
   withoutTests,
 } from './score.mjs';
 
-test('the classifier runs isolated and with no tools, so only the report and the key decide the match', () => {
-  assert.deepEqual(CLASSIFY_ARGS, ['-p', '--model', 'haiku', ...ISOLATED, '--tools', '']);
+/** A `claude` on PATH that records its arguments and each call, then runs `body`. */
+function stubClaude(body) {
+  const dir = mkdtempSync(join(tmpdir(), 'stub-claude-'));
+  writeFileSync(join(dir, 'claude'), `#!/bin/sh\ncat > /dev/null\nprintf '%s\\n' "$@" > "${dir}/args"\necho call >> "${dir}/calls"\n${body}\n`, { mode: 0o755 });
+  return dir;
+}
+function withPath(dir, fn) {
+  const saved = process.env.PATH;
+  process.env.PATH = `${dir}:${saved}`;
+  try {
+    return fn();
+  } finally {
+    process.env.PATH = saved;
+  }
+}
+
+test('the classifier runs isolated with no tools, tries twice, and fails loudly rather than count a report as a miss', () => {
+  const key = loadKey('web');
+  const report = { id: 'D-0001', title: 'SAVE10 discounts sale items', body: 'Steps' };
+  const ok = stubClaude('echo "**W3**"');
+  withPath(ok, () => assert.equal(classifyWithHaiku(report, key), 'W3'));
+  assert.deepEqual(readFileSync(join(ok, 'args'), 'utf8').split('\n').slice(0, -1), ['-p', '--model', 'haiku', ...ISOLATED, '--tools', '']);
+  const down = stubClaude('exit 1');
+  withPath(down, () => assert.throws(() => classifyWithHaiku(report, key), /D-0001: the classifier failed: exit 1/));
+  assert.equal(readFileSync(join(down, 'calls'), 'utf8').trim().split('\n').length, 2);
+  withPath(stubClaude('echo "W3 or W4"'), () => assert.throws(() => classifyWithHaiku(report, key), /unclear answer/));
+});
+
+test('a lead run that was stopped, failed, or never finished is not scored', () => {
+  assert.equal(leadRunProblem({ code: 0, signal: null }, { finished: true }), null);
+  assert.match(leadRunProblem({ code: null, signal: 'SIGTERM' }, { finished: false }), /SIGTERM/);
+  assert.match(leadRunProblem({ code: 1, signal: null }, { finished: false, stop: 'error_max_budget_usd' }), /error_max_budget_usd/);
+  assert.match(leadRunProblem({ code: 0, signal: null }, { finished: false }), /without a result/);
+  assert.match(leadRunProblem({ code: 1, signal: null }, { finished: true }), /code 1/);
+});
+
+test('with no defect reports, the false-defect rate is unknown, not zero', () => {
+  const key = loadKey('web');
+  assert.equal(rates({ found: [], falseDefects: [] }, key, 0).false_defect_rate, null);
 });
 
 test('the sandbox holds one app and the requirements, links the installed packages, and never the answer key', () => {
@@ -30,7 +68,7 @@ test('the sandbox holds one app and the requirements, links the installed packag
   assert.ok(readFileSync(join(dir, 'REQUIREMENTS.md'), 'utf8').length > 0);
   assert.ok(readFileSync(join(dir, 'src/lib/cart.ts'), 'utf8').length > 0);
   assert.ok(lstatSync(join(dir, 'node_modules')).isSymbolicLink());
-  assert.match(readFileSync(join(dir, 'qa/profile.yaml'), 'utf8'), /unit-web: qa-web:vitest[\s\S]*autonomy: L1/);
+  assert.match(readFileSync(join(dir, 'qa/profile.yaml'), 'utf8'), /unit-web: qa-web:vitest[\s\S]*autonomy: L1[\s\S]*url: http:\/\/localhost/);
   const walk = (folder) =>
     readdirSync(folder, { withFileTypes: true }).flatMap((entry) =>
       entry.name === 'node_modules' ? [] : entry.isDirectory() ? walk(join(folder, entry.name)) : [join(folder, entry.name)],
@@ -58,8 +96,12 @@ test('the classifier is asked to pick one seeded defect or none, and its answer 
   assert.equal(parseClassification('W3', key), 'W3');
   assert.equal(parseClassification('  W10\n', key), 'W10');
   assert.equal(parseClassification('NONE', key), null);
-  assert.equal(parseClassification('I think W3 or W4', key), null);
-  assert.equal(parseClassification('W99', key), null);
+  assert.equal(parseClassification('`none`', key), null);
+  assert.equal(parseClassification('**W3**', key), 'W3');
+  assert.equal(parseClassification('W3.', key), 'W3');
+  for (const unclear of ['I think W3 or W4', 'W99', '']) {
+    assert.throws(() => parseClassification(unclear, key), /unclear answer/, JSON.stringify(unclear));
+  }
 });
 
 test('matching counts each seeded defect once, and every report that matches none is a false defect', async () => {

@@ -5,7 +5,10 @@
  *        node tools/scoring/seeded.mjs --app web|mobile --rescore <sandbox> [--record evals/scorecard/runs/<file>.json]
  *   --budget   ceiling for the run's Claude usage (default 35)
  *   --dry-run  build the sandbox, print its path, and run nothing
- *   --rescore  run Stryker again on a kept sandbox, and update the record's mutation score
+ *   --rescore  run Stryker again on a kept sandbox, and update the record's mutation score; a run with no score
+ *              leaves the record as it is
+ * A lead run that was stopped, failed, or never finished is not recorded, nor is one whose defect reports the
+ * classifier could not match: the sandbox is kept, and the script exits 1.
  * The sandbox holds the app and REQUIREMENTS.md, never the answer key. The lead runs headless with autonomy L1,
  * so the pipeline's hooks carry it from stage to stage. Haiku matches each defect report to the answer key, and
  * Stryker scores the tests the department wrote. The record goes to evals/scorecard/runs/; then run
@@ -16,7 +19,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFil
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ISOLATED, parseStream } from '../eval-headless/eval-headless.mjs';
-import { APPS, loadKey, matchDefects, mutationScore, rates, readDefects, ROOT, sandbox, strykerConfig, strykerVitestConfig } from './score.mjs';
+import { APPS, leadRunProblem, loadKey, matchDefects, mutationScore, rates, readDefects, ROOT, sandbox, strykerConfig, strykerVitestConfig } from './score.mjs';
 
 const PROMPT = [
   'There is no tracker item for this app. Bring REQUIREMENTS.md in as one work item with no tracker, titled "Alchemy Shop requirements": its request is the whole of REQUIREMENTS.md, word for word.',
@@ -53,25 +56,12 @@ function runLead(dir, app, budget) {
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk) => (output += chunk));
     child.stdin.end(PROMPT);
-    child.on('close', () => {
+    child.on('close', (code, signal) => {
       clearTimeout(timer);
-      resolvePromise(output);
+      resolvePromise({ output, code, signal });
     });
   });
 }
-
-const modelOf = (output) =>
-  output
-    .split('\n')
-    .filter((line) => line.startsWith('{'))
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return {};
-      }
-    })
-    .find((event) => event.type === 'system' && event.subtype === 'init')?.model ?? 'unknown';
 
 // Test files anywhere in the project, wherever the department put them, outside packages and testware.
 const testFiles = (dir) =>
@@ -131,6 +121,11 @@ async function main() {
     const record = option('--record');
     const score = mutation(rescore, app);
     console.log(`mutation score: ${score}`);
+    if (record && score === null) {
+      console.error(`${record} is left as it is: there is no mutation score to record`);
+      process.exitCode = 1;
+      return;
+    }
     if (record) {
       const path = join(ROOT, record);
       writeFileSync(path, `${JSON.stringify({ ...JSON.parse(readFileSync(path, 'utf8')), mutation_score: score }, null, 2)}\n`);
@@ -144,18 +139,30 @@ async function main() {
   if (process.argv.includes('--dry-run')) return;
 
   const started = Date.now();
-  const output = await runLead(dir, app, Number(option('--budget', 35)));
+  const exited = await runLead(dir, app, Number(option('--budget', 35)));
   const minutes = Math.round((Date.now() - started) / 60_000);
-  const run = parseStream(output);
+  const run = parseStream(exited.output);
+  // A run that was stopped or failed is not a result: averaging it in would make the scorecard wrong.
+  const notRecorded = (why) => {
+    console.error(`not recorded: ${why}. The sandbox is kept at ${dir}.`);
+    process.exitCode = 1;
+  };
+  const problem = leadRunProblem(exited, run);
+  if (problem) return notRecorded(problem);
   const key = loadKey(app);
   const reports = readDefects(dir);
-  const match = await matchDefects(reports, key);
-  const claude = spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout.trim();
+  let match;
+  try {
+    match = await matchDefects(reports, key);
+  } catch (error) {
+    return notRecorded(error.message);
+  }
+  const claude = (spawnSync('claude', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim() || 'unknown';
   const date = new Date().toISOString().slice(0, 10);
   const record = {
     date,
     app,
-    model: modelOf(output),
+    model: run.model ?? 'unknown',
     claude_code: claude.split(' ')[0],
     pipeline_status: pipelineStatus(dir),
     ...rates(match, key, reports.length),

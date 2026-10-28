@@ -43,7 +43,7 @@ export function sandbox(app, dir) {
   const { capability, skill, platforms } = APPS[app];
   writeFileSync(
     join(dir, 'qa/profile.yaml'),
-    `stack:\n  platforms: ${platforms}\ncapabilities:\n  ${capability}: ${skill}\ntracker:\n  type: github-issues\nautonomy: L1\nenvironments:\n  local:\n    allow: [functional]\n`,
+    `stack:\n  platforms: ${platforms}\ncapabilities:\n  ${capability}: ${skill}\ntracker:\n  type: github-issues\nautonomy: L1\nenvironments:\n  local:\n    url: http://localhost\n    allow: [functional]\n`,
   );
   return dir;
 }
@@ -80,18 +80,40 @@ export function classifyPrompt(report, key) {
   ].join('\n');
 }
 
-/** The id the classifier gave, or null for NONE or anything that is not exactly one known id. */
+/**
+ * The id the classifier gave, or null for NONE. Markdown or a full stop around the answer is ignored. Any other
+ * answer is an error, never a miss: a miss counts the report as a false defect.
+ */
 export function parseClassification(text, key) {
-  const answer = String(text ?? '').trim();
-  return key.defects.some((defect) => defect.id === answer) ? answer : null;
+  const answer = String(text ?? '').trim().replace(/^[*`'"]+|[*`'".]+$/g, '');
+  if (answer.toUpperCase() === 'NONE') return null;
+  if (key.defects.some((defect) => defect.id === answer)) return answer;
+  throw new Error(`unclear answer from the classifier: ${JSON.stringify(String(text ?? '').trim().slice(0, 80))}`);
 }
 
 // Isolated from the person's own settings and plugins, and with no tools: the report and the key alone decide.
 export const CLASSIFY_ARGS = ['-p', '--model', 'haiku', ...ISOLATED, '--tools', ''];
+const CLASSIFY_ATTEMPTS = 2;
 
+/** The seeded defect a report describes, or null. It tries twice, then throws: a scorecard is never built on a guess. */
 export function classifyWithHaiku(report, key) {
-  const result = spawnSync('claude', CLASSIFY_ARGS, { input: classifyPrompt(report, key), encoding: 'utf8', timeout: 300_000 });
-  return parseClassification(result.status === 0 ? result.stdout : '', key);
+  for (let attempt = 1; ; attempt += 1) {
+    const result = spawnSync('claude', CLASSIFY_ARGS, { input: classifyPrompt(report, key), encoding: 'utf8', timeout: 300_000 });
+    try {
+      if (result.error || result.status !== 0) throw new Error(`the classifier failed: ${result.error?.message ?? `exit ${result.status}`}`);
+      return parseClassification(result.stdout, key);
+    } catch (error) {
+      if (attempt >= CLASSIFY_ATTEMPTS) throw new Error(`${report.id}: ${error.message}`);
+    }
+  }
+}
+
+/** Why a lead run cannot be scored, or null when it finished: a run that was stopped or failed is not a result. */
+export function leadRunProblem({ code, signal }, run) {
+  if (signal) return `the lead run was stopped by ${signal}, as at its time limit`;
+  if (!run.finished) return run.stop ? `the lead run ended with ${run.stop}` : 'the lead run ended without a result';
+  if (code !== 0) return `the lead run exited with code ${code}`;
+  return null;
 }
 
 const byNumber = (a, b) => Number(a.slice(1)) - Number(b.slice(1));
@@ -124,7 +146,8 @@ export function rates(match, key, reported) {
     unit_detection: round(unitFound / unit.length),
     reported,
     false_defects: match.falseDefects.length,
-    false_defect_rate: reported ? round(match.falseDefects.length / reported) : 0,
+    // With no reports there is no rate: 0 would read as a perfect one.
+    false_defect_rate: reported ? round(match.falseDefects.length / reported) : null,
   };
 }
 
