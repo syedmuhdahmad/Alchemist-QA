@@ -50,6 +50,14 @@ Phase 1: method and staff.
 - `intake-manual` no longer passes a typed request through the shell. The agent writes the request, its title, and its origin to `qa/inbox/request.md` with its Write tool, and `manual-item.mjs --from-request` reads that file and removes it. Before, a line `REQUEST` in the request ended the heredoc early and the shell ran the lines after it, and `$(...)` in a title ran too. The script's `--title`, `--request-file`, `--origin`, and `--type` flags are gone, and it refuses any argument it does not know. A request file left from an intake that did not finish is never overwritten: the agent asks the person whether to bring it in first or replace it (#117).
 - The drafted GitHub comment leaves out **Waiting on the owner** when the section says "None.", so `met` and `not-met` comments no longer carry an empty section (#118).
 
+### Security
+
+- The pipeline hooks trust a state file in `qa/state/` only under its own name, with a pipeline and stage the engine knows and a work item id. Before, a state file whose `file` field read like `../../../.claude/CLAUDE` made `SessionEnd` append text from the file to a Markdown file outside the project, with no prompt; state files are committed, so a pull request could plant one. A state file that does not parse no longer silences the other hooks.
+- `/qa:onboard` prints its permission rules with `permission-rules.mjs`, and each rule names one script by its absolute path, quoted as the skills run it. The old rules, such as `Bash(node *pipeline.mjs *)`, also allowed `node -e '<any code>' pipeline.mjs`, and never matched the skills' quoted commands anyway.
+- The pipeline state keeps token counts by session id, so a committed state no longer names the person's home folder.
+- The scoring classifier and the eval runner's judge run isolated from the person's own settings, with no tools.
+- The benchmark apps take the non-breaking `npm audit fix`: it clears the `qs` and `typed-rest-client` advisories that came with Stryker, and the older `vite`, `zod`, `body-parser`, and `launch-editor` ones.
+
 ## [0.0.1] - 2026-10-03
 
 Phase 0: foundations. No agents or test skills yet.

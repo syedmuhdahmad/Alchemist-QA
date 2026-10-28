@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { armArgs, finalReply, grade, ISOLATED, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
+import { armArgs, finalReply, grade, ISOLATED, JUDGE_ARGS, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -199,4 +199,8 @@ test('a graded run loads only the plugins under test: no user settings, hooks, o
   assert.ok(args.join(' ').includes('--plugin-dir /p/qa'));
   assert.ok(args.join(' ').includes('--allowedTools Read Skill'));
   assert.ok(args.join(' ').includes('--max-budget-usd 2'));
+});
+
+test('the judge runs isolated and with no tools, so only the criteria and the work decide its verdict', () => {
+  assert.deepEqual(JUDGE_ARGS, ['-p', '--model', 'haiku', ...ISOLATED, '--tools', '']);
 });

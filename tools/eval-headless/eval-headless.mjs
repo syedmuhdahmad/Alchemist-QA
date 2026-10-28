@@ -103,7 +103,7 @@ export function judgePrompt(criteria, text) {
 /** Asks a small model to judge text against an llm grader's criteria, as the eval runner does. */
 export async function judgeWithHaiku(criteria, text) {
   const question = judgePrompt(criteria, text);
-  return judgeVerdict(spawnSync('claude', ['-p', '--model', 'haiku'], { input: question, encoding: 'utf8', timeout: 300_000 }));
+  return judgeVerdict(spawnSync('claude', JUDGE_ARGS, { input: question, encoding: 'utf8', timeout: 300_000 }));
 }
 
 /** A verdict from the judge's process result. A judge that failed to run is not a FAIL verdict. */
@@ -191,6 +191,9 @@ export function finalReply(run, workspace, home = homedir()) {
  * would change what the agent sees and does, and make results depend on whose machine ran them.
  */
 export const ISOLATED = ['--setting-sources', 'project,local', '--strict-mcp-config'];
+// The judge, like a graded run, sees none of the person's own settings, and it needs no tools: the work it judges is
+// in the prompt.
+export const JUDGE_ARGS = ['-p', '--model', 'haiku', ...ISOLATED, '--tools', ''];
 
 /** The `claude -p` arguments for one arm of a case. */
 export function armArgs(testCase, pluginDirs, budgetUsd) {

@@ -21,28 +21,58 @@ export function loadPipelines() {
   return JSON.parse(readFileSync(new URL('../pipelines.json', import.meta.url), 'utf8'));
 }
 
-const statePath = (root, file) => join(root, 'qa', 'state', `${file}.pipeline.json`);
+// A work item's file name and id, as `start` accepts them. State files are committed with the project, so a state is
+// trusted only with these: then no hook writes outside qa/state, and no session is shown text the engine never wrote.
+export const FILE = /^[A-Za-z0-9-]+$/;
+export const ITEM = /^[#A-Za-z0-9-]+$/;
+const SUFFIX = '.pipeline.json';
 
-export function readState(root, file) {
+function statePath(root, file) {
+  if (typeof file !== 'string' || !FILE.test(file)) throw new Error(`not a work item file name: ${file}`);
+  return join(root, 'qa', 'state', `${file}${SUFFIX}`);
+}
+
+/**
+ * The state saved for a work item file, or null when there is none or it is not one the engine could have written.
+ * Its file name is always the state file's own name, never what the file says.
+ */
+export function readState(root, file, manifest = loadPipelines()) {
+  if (typeof file !== 'string' || !FILE.test(file)) return null;
   const path = statePath(root, file);
-  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
+  if (!existsSync(path)) return null;
+  let state;
+  try {
+    state = JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+  const pipeline = state && typeof state === 'object' && Object.hasOwn(manifest.pipelines, state.pipeline) ? manifest.pipelines[state.pipeline] : null;
+  const known = pipeline?.stages.some((stage) => stage.id === state.stage) && typeof state.item === 'string' && ITEM.test(state.item);
+  return known ? { ...state, file } : null;
 }
 
 export function saveState(root, state) {
+  const path = statePath(root, state.file);
   mkdirSync(join(root, 'qa', 'state'), { recursive: true });
-  writeFileSync(statePath(root, state.file), `${JSON.stringify(state, null, 2)}\n`);
+  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+/** Every state in qa/state that the engine could have written. */
+function allStates(root, manifest) {
+  const dir = join(root, 'qa', 'state');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(SUFFIX))
+    .map((name) => readState(root, name.slice(0, -SUFFIX.length), manifest))
+    .filter(Boolean);
 }
 
 /** The pipeline being worked on: the most recently updated one that is running or waiting, or null. */
-export function activeState(root) {
-  const dir = join(root, 'qa', 'state');
-  if (!existsSync(dir)) return null;
+export function activeState(root, manifest = loadPipelines()) {
   return (
-    readdirSync(dir)
-      .filter((name) => name.endsWith('.pipeline.json'))
-      .map((name) => JSON.parse(readFileSync(join(dir, name), 'utf8')))
+    allStates(root, manifest)
       .filter((state) => state.status === 'running' || state.status === 'waiting')
-      .sort((a, b) => b.updated.localeCompare(a.updated))[0] ?? null
+      .sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0] ?? null
   );
 }
 
@@ -191,7 +221,7 @@ function main(args) {
     const item = option('--item');
     const file = option('--file');
     if (!pipeline || !item || !file) return fail('usage: pipeline.mjs start <pipeline> --item <id> --file <file>');
-    if (!/^[#A-Za-z0-9-]+$/.test(item) || !/^[A-Za-z0-9-]+$/.test(file)) return fail('--item and --file take a work item id and its file name, such as #12 and 12');
+    if (!ITEM.test(item) || !FILE.test(file)) return fail('--item and --file take a work item id and its file name, such as #12 and 12');
     try {
       const started = startPipeline(root, { pipeline, item, file, now: new Date().toISOString() });
       const { state, missing } = advance(root, started);
@@ -210,10 +240,9 @@ function main(args) {
     return 0;
   }
   if (command === 'status') {
-    const dir = join(root, 'qa', 'state');
-    const names = existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith('.pipeline.json')) : [];
-    if (names.length === 0) console.log('no pipeline has been started');
-    for (const name of names) console.log(describe(root, JSON.parse(readFileSync(join(dir, name), 'utf8'))));
+    const states = allStates(root, loadPipelines());
+    if (states.length === 0) console.log('no pipeline has been started');
+    for (const state of states) console.log(describe(root, state));
     return 0;
   }
   return fail('usage: pipeline.mjs start|next|status (see the header of this file)');

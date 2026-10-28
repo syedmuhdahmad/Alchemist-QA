@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { parseFrontmatter } from '../../plugins/qa/skills/traceability/scripts/trace.mjs';
+import { ISOLATED } from '../eval-headless/eval-headless.mjs';
 import { accuracy, buildManifest } from '../routing/build.mjs';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -85,8 +86,11 @@ export function parseClassification(text, key) {
   return key.defects.some((defect) => defect.id === answer) ? answer : null;
 }
 
+// Isolated from the person's own settings and plugins, and with no tools: the report and the key alone decide.
+export const CLASSIFY_ARGS = ['-p', '--model', 'haiku', ...ISOLATED, '--tools', ''];
+
 export function classifyWithHaiku(report, key) {
-  const result = spawnSync('claude', ['-p', '--model', 'haiku'], { input: classifyPrompt(report, key), encoding: 'utf8', timeout: 300_000 });
+  const result = spawnSync('claude', CLASSIFY_ARGS, { input: classifyPrompt(report, key), encoding: 'utf8', timeout: 300_000 });
   return parseClassification(result.status === 0 ? result.stdout : '', key);
 }
 

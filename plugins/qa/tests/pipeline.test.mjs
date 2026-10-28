@@ -154,6 +154,15 @@ test('the description names the stage, its agent, and what is missing', () => {
   assert.match(readFileSync(join(root, 'qa/state/12.pipeline.json'), 'utf8'), /"pipeline": "feature"/);
 });
 
+test('state is read and written only under qa/state, by a work item file name', () => {
+  const { root } = project();
+  const state = { pipeline: 'feature', item: '#12', file: '../escaped', status: 'running', stage: 'intake', stages: {}, updated: T0 };
+  assert.throws(() => saveState(root, state), /file name/);
+  mkdirSync(join(root, 'qa/state'), { recursive: true });
+  writeFileSync(join(root, 'qa/escaped.pipeline.json'), JSON.stringify(state));
+  assert.equal(readState(root, '../escaped'), null);
+});
+
 test('the pipeline schema lists exactly the checks the engine has', async () => {
   const { CHECK_NAMES } = await import('../skills/pipeline/scripts/checks.mjs');
   const schema = JSON.parse(readFileSync(new URL('../schemas/pipelines.schema.json', import.meta.url), 'utf8'));

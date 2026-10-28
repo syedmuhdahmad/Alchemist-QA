@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ISOLATED } from '../eval-headless/eval-headless.mjs';
 import {
+  CLASSIFY_ARGS,
   classifyPrompt,
   loadKey,
   matchDefects,
@@ -17,6 +19,10 @@ import {
   strykerConfig,
   withoutTests,
 } from './score.mjs';
+
+test('the classifier runs isolated and with no tools, so only the report and the key decide the match', () => {
+  assert.deepEqual(CLASSIFY_ARGS, ['-p', '--model', 'haiku', ...ISOLATED, '--tools', '']);
+});
 
 test('the sandbox holds one app and the requirements, links the installed packages, and never the answer key', () => {
   const dir = join(mkdtempSync(join(tmpdir(), 'seeded-')), 'project');

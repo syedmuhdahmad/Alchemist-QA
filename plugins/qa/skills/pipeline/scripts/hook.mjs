@@ -12,7 +12,7 @@
  * No npm dependencies: plugins run on the user's machine as shipped.
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { activeState, addTokens, advance, autonomyOf, continueDecision, describe, evaluate, ledgerLine, loadPipelines, saveState } from './pipeline.mjs';
 
 const SEND_BACK = 2;
@@ -36,13 +36,17 @@ function transcriptTokens(path) {
   return total;
 }
 
-/** Adds the tokens a transcript gained since this hook last read it to the current stage. */
+/**
+ * Adds the tokens a transcript gained since this hook last read it to the current stage. Counts are kept under the
+ * transcript's session id, because the state is committed and a full path would name the person's home folder.
+ */
 function countTokens(state, path) {
   if (!path) return state;
+  const session = basename(path, '.jsonl');
   state.seen ??= {};
   const total = transcriptTokens(path);
-  addTokens(state, Math.max(0, total - (state.seen[path] ?? 0)));
-  state.seen[path] = total;
+  addTokens(state, Math.max(0, total - (state.seen[session] ?? 0)));
+  state.seen[session] = total;
   return state;
 }
 
@@ -68,9 +72,9 @@ function paths(root, state) {
 function handle(input) {
   const root = input.cwd;
   if (typeof root !== 'string' || !existsSync(join(root, 'qa', 'profile.yaml'))) return null;
-  const state = activeState(root);
-  if (!state) return null;
   const manifest = loadPipelines();
+  const state = activeState(root, manifest);
+  if (!state) return null;
   const now = new Date().toISOString();
   const event = input.hook_event_name;
 

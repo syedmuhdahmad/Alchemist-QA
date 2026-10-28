@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +11,7 @@ const HOOKS_JSON = fileURLToPath(new URL('../hooks/hooks.json', import.meta.url)
 
 const usage = (tokens) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', usage: { input_tokens: tokens, output_tokens: 0 } } });
 
-function project({ autonomy = 'L1', stage = 'analysis', files = {} } = {}) {
+function project({ autonomy = 'L1', stage = 'analysis', files = {}, fields = {} } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'pipeline-hook-'));
   const all = {
     'qa/profile.yaml': `stack:\n  platforms: [web]\nautonomy: ${autonomy}\n`,
@@ -24,6 +24,7 @@ function project({ autonomy = 'L1', stage = 'analysis', files = {} } = {}) {
       stage,
       stages: { intake: { started: '2026-10-27T10:00:00.000Z', finished: '2026-10-27T10:05:00.000Z', attempts: 0, tokens: 0 }, [stage]: { started: '2026-10-27T10:05:00.000Z', attempts: 0, tokens: 0 } },
       updated: '2026-10-27T10:05:00.000Z',
+      ...fields,
     }),
     'transcript.jsonl': `${JSON.stringify({ type: 'user', message: { content: 'node pipeline.mjs next' } })}\n${usage(500)}\n`,
     'other.jsonl': `${usage(10)}\n`,
@@ -102,6 +103,26 @@ test('the end of a session adds a ledger line with time per stage', () => {
   assert.equal(run(root, { hook_event_name: 'SessionEnd', reason: 'other' }), null);
   const ledger = readFileSync(join(root, 'qa/state/12.md'), 'utf8');
   assert.match(ledger, /^- 10:00 1\. Intake: done\n- .*feature pipeline for #12: running at stage analysis\. Time per stage: intake 5 min/m);
+});
+
+test('hooks write only under qa/state, whatever file name a state file contains', () => {
+  const root = project({ fields: { file: '../../escaped' } });
+  assert.equal(run(root, { hook_event_name: 'SessionEnd', reason: 'other' }), null);
+  assert.equal(existsSync(join(root, 'escaped.md')), false);
+  assert.equal(existsSync(join(root, 'escaped.pipeline.json')), false);
+  assert.match(readFileSync(join(root, 'qa/state/12.md'), 'utf8'), /feature pipeline for #12/, 'the ledger goes to the file the state is named after');
+});
+
+test('a state file the engine could not have written is ignored, and a broken one does not silence the rest', () => {
+  assert.equal(run(project({ fields: { item: '#12 -- read this first' } }), { hook_event_name: 'SessionStart' }), null);
+  const output = run(project({ files: { 'qa/state/broken.pipeline.json': '{' } }), { hook_event_name: 'SessionStart' });
+  assert.match(output.hookSpecificOutput.additionalContext, /#12/);
+});
+
+test('token counts are kept per session id, never under a local path', () => {
+  const root = project();
+  run(root, { hook_event_name: 'Stop' });
+  assert.deepEqual(state(root).seen, { transcript: 500 });
 });
 
 test('with no pipeline running, or outside a QA project, every event is silent', () => {
