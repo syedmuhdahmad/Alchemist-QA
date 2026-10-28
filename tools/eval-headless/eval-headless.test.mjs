@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { finalReply, grade, judgePrompt, judgeVerdict, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
+import { armArgs, finalReply, grade, ISOLATED, judgePrompt, judgeVerdict, judgeWithHaiku, lastReply, loadCase, parseStream, transcriptPath } from './eval-headless.mjs';
 
 function folder(files) {
   const root = mkdtempSync(join(tmpdir(), 'eval-headless-'));
@@ -92,6 +92,7 @@ test('the stream gives the tool calls, the final reply, and the cost', () => {
     uses: [{ name: 'Bash', input: { command: 'ls' } }],
     lastMessage: 'done',
     costUsd: 0.25,
+    finished: true,
   });
 });
 
@@ -100,7 +101,7 @@ test('a line cut off mid-object, as when a run is killed at its timeout, is skip
     JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'partial work' }] } }),
     '{"type":"assistant","message":{"content":[{"type":"te',
   ];
-  assert.deepEqual(parseStream(lines.join('\n')), { uses: [], lastMessage: 'partial work', costUsd: 0 });
+  assert.deepEqual(parseStream(lines.join('\n')), { uses: [], lastMessage: 'partial work', costUsd: 0, finished: false });
 });
 
 test('the judge verdict comes from the first line of its answer', () => {
@@ -190,4 +191,40 @@ test('the final reply falls back to the stream when the transcript cannot be rea
   writeFileSync(transcriptPath('/tmp/ws', 's2', home), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'From the transcript.' }] } }));
   assert.equal(finalReply(other, '/tmp/ws', home), 'From the transcript.');
   assert.equal(finalReply({ lastMessage: 'Only the stream.' }, '/tmp/ws', home), 'Only the stream.', 'no session id');
+});
+
+test('a graded run loads only the plugins under test: no user settings, hooks, or MCP servers', () => {
+  const args = armArgs({ allowedTools: ['Read', 'Skill'] }, ['/p/qa'], 2);
+  assert.deepEqual(ISOLATED, ['--setting-sources', 'project,local', '--strict-mcp-config']);
+  assert.ok(args.join(' ').includes('--setting-sources project,local --strict-mcp-config'));
+  assert.ok(args.join(' ').includes('--plugin-dir /p/qa'));
+  assert.ok(args.join(' ').includes('--allowedTools Read Skill'));
+  assert.ok(args.join(' ').includes('--max-budget-usd 2'));
+});
+
+test('the judge runs isolated and with no tools, so only the criteria and the work decide its verdict', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'stub-claude-'));
+  writeFileSync(join(dir, 'claude'), `#!/bin/sh\ncat > /dev/null\nprintf '%s\\n' "$@" > "${dir}/args"\nprintf 'PASS\\nIt names a colour.\\n'\n`, { mode: 0o755 });
+  const saved = process.env.PATH;
+  process.env.PATH = `${dir}:${saved}`;
+  try {
+    assert.deepEqual(await judgeWithHaiku('Names a colour.', 'Blue.'), { passed: true, why: 'It names a colour.' });
+  } finally {
+    process.env.PATH = saved;
+  }
+  assert.deepEqual(readFileSync(join(dir, 'args'), 'utf8').split('\n').slice(0, -1), ['-p', '--model', 'haiku', ...ISOLATED, '--tools', '']);
+});
+
+test('the stream says whether the run finished, how it ended if not, and which model ran', () => {
+  const init = JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-opus-5-5', session_id: 's1' });
+  const budget = JSON.stringify({ type: 'result', subtype: 'error_max_budget_usd', is_error: true, total_cost_usd: 35 });
+  assert.deepEqual(parseStream([init, budget].join('\n')), {
+    uses: [],
+    lastMessage: '',
+    costUsd: 35,
+    finished: false,
+    stop: 'error_max_budget_usd',
+    sessionId: 's1',
+    model: 'claude-opus-5-5',
+  });
 });

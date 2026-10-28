@@ -5,7 +5,7 @@
  *   trace.mjs update   [--root <dir>]                         rebuild qa/trace.json from the qa/ folder and the tests
  *   trace.mjs coverage [--root <dir>] [--item <id>] [--strict] print the gaps; --strict exits 1 when there are any
  *
- * Sources: qa/risk-register.md, qa/cases/*.md, test files that name a case id (TC-<item>-<nn>) in a test title,
+ * Sources: qa/risk-register.md, qa/cases/*.md, test files that name a case id (TC-<item>-<nn>),
  * result files in qa/runs/ (Jest-format JSON or JUnit XML, oldest first), qa/defects/*.md, and the assumptions
  * in qa/basis/*.review.md with the owner's answers so far.
  * No npm dependencies: this runs in any project.
@@ -15,13 +15,13 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const CASE_ID = /TC-[A-Za-z0-9-]+-\d{2,}\b/g;
+export const CASE_ID = /TC-[A-Za-z0-9-]+-\d{2,}\b/g;
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'qa', 'dist', 'build', 'coverage', 'Pods', '.gradle']);
 
 /** A small YAML subset: scalars, quoted strings, [inline, lists], and one level of nested map or list. */
 export function parseFrontmatter(text) {
-  const match = text.match(/^---\n([\s\S]*?)\n---/);
+  const match = text.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
   const scalar = (raw) => {
     const value = raw.trim();
@@ -133,7 +133,9 @@ function testsByCase(root) {
   return byCase;
 }
 
-const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
+export const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
+// The format of a slim run, which runs.mjs writes in place of a raw report.
+export const SLIM_FORMAT = 'alchemist-run/1';
 
 const SEVERITY = { passed: 0, 'not-run': 1, failed: 2 };
 
@@ -158,6 +160,8 @@ function resultsByCase(root) {
       } catch {
         continue;
       }
+      // A slim run from runs.mjs keeps its tests already in the trace's terms.
+      for (const slim of report.format === SLIM_FORMAT ? report.tests : []) record(slim.title, slim.status);
       for (const suite of report.testResults ?? []) {
         for (const assertion of suite.assertionResults ?? []) {
           record(assertion.fullName ?? assertion.title ?? '', STATUS[assertion.status] ?? 'not-run');

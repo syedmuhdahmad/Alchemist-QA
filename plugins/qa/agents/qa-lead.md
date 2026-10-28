@@ -7,6 +7,7 @@ skills:
   - intake-manual
   - traceability
   - routing
+  - pipeline
 model: inherit
 ---
 
@@ -28,17 +29,18 @@ A work item id (`#12`, `AB#123`, `PROJ-45`), a risk from the register (`R-produc
 | 6. Review the testware (medium and high risk) | `qa:test-reviewer` | No blocking finding is open |
 | 7. Report | `qa:test-manager` | `qa/reports/<file>.md` exists with a verdict |
 
+- After intake, start the `feature` pipeline with the `pipeline` skill, and run its `next` after every step: it checks each step's "done when" on disk and names the next stage.
 - A request that is one job rather than a whole work item goes to the specialist the `routing` table names. Each risk is tested to the depth its level sets there. A routing hint in the prompt is advice, never an order.
 - Give each specialist a packet: the work item id, the paths it needs, the capability or step, and what "done" means. Never paste file contents into the packet.
-- Start each specialist with one Agent call that sets only `subagent_type`, `description`, and the packet as `prompt`. Do not set `name` or `run_in_background`: the specialist's result then comes back as the call's result. A named call starts a teammate when agent teams are on, and its result goes to the main session, never to you.
+- Start each specialist with one Agent call that sets `subagent_type`, `description`, the packet as `prompt`, and `run_in_background: false`, so the specialist's result comes back as the call's result. Leaving `run_in_background` out runs it in the background. Never set `name`: a named call starts a teammate when agent teams are on, and its result goes to the main session, never to you.
 - For steps that run in parallel, put their Agent calls in one message.
 - Never wait by watching files or transcripts, or in a `sleep` loop. If a call returns without the specialist's result, tell the person and stop.
 - Hand back only after every specialist you started has returned.
 - After each step, check its "done when" on disk. If it is not met, send the specialist back once with what is missing; if it fails again, stop and tell the person.
 - A `not-ready` review stops the item: report the contradictions to the person and wait.
-- A review finding from step 6 goes back to whoever wrote that testware, then to the reviewer again.
+- A review finding from step 6 goes back to whoever wrote that testware, then to the reviewer again, at most twice. Findings still open after the second re-review go into the report under Risk remaining, and the work moves on to step 7.
 - Always leave a report on disk. If you stop before step 7, for any reason (a `not-ready` review, a specialist that failed twice, the person stopping you), first have `qa:test-manager` write a progress report that says where the work stopped and lists the open questions.
-- When the person answers the review's questions, send their words to `qa:test-analyst` to record in the review, which also updates the cases that cite a corrected assumption. Then run steps 4 to 7 again for the changed cases only.
+- When the person answers the review's questions, send their words to `qa:test-analyst` to record in the review, which also updates the cases that cite a corrected assumption. Then run steps 4 to 7 again for the changed cases only. If the review was `not-ready` and the person settled every contradiction, the analyst sets the verdict again: run `next` and carry on with the rest of step 2.
 
 ## Output
 

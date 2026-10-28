@@ -25,6 +25,12 @@ Phase 1: method and staff.
 - Routing manifest `plugins/qa/routing.yaml`: 17 routes, the work-item ids the department recognises, and how deeply each risk level is tested. `tools/routing/build.mjs` generates the `routing` skill's tables, the hook's `routing.json`, and the routing evals from it, and the tests fail while they are out of step (#31).
 - A `UserPromptSubmit` hook adds a routing hint to a matching prompt in a project with `qa/profile.yaml`. It matches in plain code, never blocks a prompt, and only advises (#32).
 - Routing golden set `tools/routing/golden.yaml`: CI fails when fewer than 95% of its prompts route as expected. A model eval case per route checks how Claude routes, run locally (#37).
+- Pipeline engine and the `feature` pipeline (`plugins/qa/pipelines.yaml`): each stage is done when named checks hold on disk, and the state lives in `qa/state/<file>.pipeline.json`. The lead preloads the new `pipeline` skill, starts the pipeline after intake, and runs `next` after each step (#33, #36).
+- Pipeline hooks. `SessionStart` resumes, and `SubagentStart` hands a specialist its stage and paths. `SubagentStop` sends a stage's own specialist back with what is missing, at most twice. `Stop` carries the driving session on at autonomy L1 or above, at most three times per stage. `PreCompact` and `SessionEnd` checkpoint and write the ledger (#33, #34).
+- A `PostToolUse` hook slims new runs, updates `qa/trace.json`, and queues failures for triage, with no agent action (#35).
+- Runs stay small: a slim run keeps failures and case-linked tests, and the raw report only as `runs/latest/` (#113).
+- The ledger records time and tokens per stage, and plans estimate the agent run in `estimate_agent_minutes` and `estimate_agent_usd` (#112).
+- Seeded-defect scoring: `tools/scoring/seeded.mjs` runs the department on a benchmark app, unattended, and records detection, false defects, Stryker's mutation score, flaky failures, cost, and time. `tools/scoring/scorecard.mjs` publishes `docs/scorecard.md` and the README scorecard (#38, #39, #40).
 
 ### Changed
 
@@ -32,6 +38,7 @@ Phase 1: method and staff.
 - The GitHub intake script moved into the `intake-github` skill.
 - `test-reporting` judges the exit criteria without the provisional cases, then says `not-met`, `awaiting-owner`, or `met`, in that order. A failure classed `question` alone no longer makes a report `not-met`. A report without a plan is never `met` (#111, #115).
 - Failure triage classes a failure `question` only while its assumption is open.
+- `test-basis-review` records the owner's rule for a contradiction they settle as a corrected assumption, and sets the verdict again, so a `not-ready` review becomes `ready-with-assumptions` once every contradiction is settled. Before, it stayed `not-ready`, and the pipeline waited for good.
 - `qa-lead` routes a risk or a typed request to `intake-manual`, always leaves a report on disk when it stops early, and sends the owner's answers to the analyst (#110, #111).
 
 ### Fixed
@@ -43,6 +50,14 @@ Phase 1: method and staff.
 - `trace.mjs` skips the `## Product: first pass` draft that `/qa:onboard` writes, so its risks no longer show as risks without cases (#108).
 - `intake-manual` no longer passes a typed request through the shell. The agent writes the request, its title, and its origin to `qa/inbox/request.md` with its Write tool, and `manual-item.mjs --from-request` reads that file and removes it. Before, a line `REQUEST` in the request ended the heredoc early and the shell ran the lines after it, and `$(...)` in a title ran too. The script's `--title`, `--request-file`, `--origin`, and `--type` flags are gone, and it refuses any argument it does not know. A request file left from an intake that did not finish is never overwritten: the agent asks the person whether to bring it in first or replace it (#117).
 - The drafted GitHub comment leaves out **Waiting on the owner** when the section says "None.", so `met` and `not-met` comments no longer carry an empty section (#118).
+
+### Security
+
+- The pipeline hooks trust a state file in `qa/state/` only under its own name, with a pipeline and stage the engine knows and a work item id. Before, a state file whose `file` field read like `../../../.claude/CLAUDE` made `SessionEnd` append text from the file to a Markdown file outside the project, with no prompt; state files are committed, so a pull request could plant one. A state file that does not parse no longer silences the other hooks.
+- `/qa:onboard` prints its permission rules with `permission-rules.mjs`, and each rule names one script by its absolute path, quoted as the skills run it. The old rules, such as `Bash(node *pipeline.mjs *)`, also allowed `node -e '<any code>' pipeline.mjs`, and never matched the skills' quoted commands anyway.
+- The pipeline state keeps token counts by session id, so a committed state no longer names the person's home folder.
+- The scoring classifier and the eval runner's judge run isolated from the person's own settings, with no tools.
+- The benchmark apps take the non-breaking `npm audit fix`: it clears the `qs` and `typed-rest-client` advisories that came with Stryker, and the older `vite`, `zod`, `body-parser`, and `launch-editor` ones.
 
 ## [0.0.1] - 2026-10-03
 

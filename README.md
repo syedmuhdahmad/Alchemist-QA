@@ -4,7 +4,7 @@ A QA company for [Claude Code](https://claude.com/claude-code). Give it a work i
 
 Its methods follow the ISTQB syllabi. Its tools are open source only. It never edits your product code.
 
-> **Status: phase 1.** The department has its six staff agents, twelve method skills from the CTFL syllabus, unit and component testing for React web and React Native, GitHub Issues intake, and `/qa:onboard`. It works one job per request, and a person reviews everything before it leaves the project. Hooks and unattended pipelines come in phase 2. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
+> **Status: phase 2.** The department has its six staff agents, twelve method skills from the CTFL syllabus, unit and component testing for React web and React Native, GitHub Issues intake, `/qa:onboard`, routing hints, and the `feature` pipeline, which hooks carry through unattended at autonomy L1. A person reviews everything before it leaves the project. End-to-end testing comes in phase 3. See the [roadmap](docs/roadmap.md), the [milestones](https://github.com/syedmuhdahmad/Alchemist-QA/milestones), and the [project board](https://github.com/users/syedmuhdahmad/projects/2).
 
 ## Install
 
@@ -36,11 +36,30 @@ and ask it to test an issue, such as "take #12 through testing". With no tracker
 
 In a project with `qa/profile.yaml`, a hook adds a routing hint to each prompt that matches a route in [`plugins/qa/routing.yaml`](plugins/qa/routing.yaml), such as "Write test cases for the promo code field" going to the test analyst. It matches keywords in plain code, never calls a model, and only advises: the agent still decides.
 
+With `autonomy: L1` in `qa/profile.yaml`, the lead carries a work item through the `feature` pipeline on its own: hooks check each stage's files, hand each specialist its inputs, send it back when its output is missing, and stop after three tries at one stage. At `L0`, the default, the lead runs one step per request and is never sent on to the next stage; a specialist that returns with its output missing is still sent back.
+
 | Plugin | What it adds |
 | --- | --- |
 | `qa` | The agents `qa-lead`, `test-analyst`, `automation-engineer`, `failure-triager`, `test-reviewer`, and `test-manager`. The method skills `test-basis-review`, `risk-analysis`, `acceptance-criteria`, `test-design-blackbox`, `test-design-whitebox`, `exploratory-testing`, `test-planning`, `regression-selection`, `failure-triage`, `defect-reporting`, `test-reporting`, and `traceability`. `intake-github`, `intake-manual` (a risk from the register or a request typed in chat, when no tracker holds the item), `routing` with its prompt hook, `/qa:onboard`, and `/qa:about`. |
 | `qa-web` | `vitest`: unit and component tests for React web with Vitest and Testing Library. |
 | `qa-mobile` | `jest-native`: unit and component tests for bare React Native with Jest and React Native Testing Library. |
+
+## Scorecard
+
+How the department does on the benchmark product, measured unattended:
+
+<!-- generated:scorecard:start -->
+| App | Model | Runs | Unit-level detection | Detection | False-defect rate | Mutation score | Flaky failures | Cost per run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| mobile | claude-opus-5-5 | 2 | 100% | 95% | 14% | 77% | 0 | $10.52 |
+| web | claude-opus-5-5 | 2 | 100% | 100% | 23% | 79% | 0 | $6.36 |
+
+Routing: 63 of 63 golden prompts by the plain-code matcher, and 17 of 17 cases by Claude with the hint.
+
+Every run, and how each figure is measured: [docs/scorecard.md](docs/scorecard.md).
+<!-- generated:scorecard:end -->
+
+What a run costs: a benchmark run, which brings a whole requirements document in as one work item, cost $6 to $14 of Claude usage and took 30 to 90 minutes. A single issue costs less. Each test plan estimates its own run, in `estimate_agent_minutes` and `estimate_agent_usd`.
 
 ## How it is built
 

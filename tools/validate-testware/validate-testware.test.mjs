@@ -46,26 +46,32 @@ const PIPELINE = `pipelines:
       - id: design
         agent: test-analyst
         method: test-design-blackbox
-        exit: ["qa/cases/{item}.md exists"]
+        exit: [cases]
 `;
 
-test('a pipeline stage with an agent and exit criteria is valid', () => {
+test('a pipeline stage with an agent and exit checks is valid', () => {
   assert.deepEqual(check('pipelines.yaml', PIPELINE), []);
 });
 
-test('a stage without exit criteria is rejected', () => {
-  const errors = check('pipelines.yaml', PIPELINE.replace('        exit: ["qa/cases/{item}.md exists"]\n', ''));
+test('a stage without exit checks is rejected', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('        exit: [cases]\n', ''));
   assert.match(errors.join('\n'), /exit/);
 });
 
-test('a stage must name either one agent or parallel branches', () => {
-  const errors = check('pipelines.yaml', PIPELINE.replace('        agent: test-analyst\n', ''));
-  assert.match(errors.join('\n'), /stages\/0/);
+test('an exit check the engine does not know is rejected', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('exit: [cases]', 'exit: ["qa/cases/{item}.md exists"]'));
+  assert.match(errors.join('\n'), /exit\/0/);
 });
 
-test('a parallel stage is valid without an agent', () => {
-  const text = PIPELINE.replace('        agent: test-analyst\n', '        parallel: [web, mobile]\n');
+test('a stage must name its agent', () => {
+  const errors = check('pipelines.yaml', PIPELINE.replace('        agent: test-analyst\n', ''));
+  assert.match(errors.join('\n'), /agent/);
+});
+
+test('a parallel stage still names its agent, one per capability', () => {
+  const text = PIPELINE.replace('        method: test-design-blackbox\n', '        parallel: true\n');
   assert.deepEqual(check('pipelines.yaml', text), []);
+  assert.match(check('pipelines.yaml', text.replace('parallel: true', 'parallel: [web, mobile]')).join('\n'), /parallel/);
 });
 
 const PROFILE = `stack:
@@ -409,6 +415,13 @@ test('awaiting names assumptions, A<n>', () => {
 test('a plan needs an estimate', () => {
   assert.deepEqual(check('qa/plans/12.md', '---\nwork_item: "#12"\nestimate_hours: 6\n---\n'), []);
   assert.match(check('qa/plans/12.md', '---\nwork_item: "#12"\n---\n').join('\n'), /estimate_hours/);
+});
+
+test('a plan may estimate the agent run as ranges of minutes and US dollars', () => {
+  const plan = (extra) => `---\nwork_item: "#12"\nestimate_hours: 6\n${extra}\n---\n`;
+  assert.deepEqual(check('qa/plans/12.md', plan('estimate_agent_minutes: [35, 60]\nestimate_agent_usd: [7, 12]')), []);
+  assert.match(check('qa/plans/12.md', plan('estimate_agent_usd: 9')).join('\n'), /estimate_agent_usd/);
+  assert.match(check('qa/plans/12.md', plan('estimate_agent_minutes: [60, 35, 10]')).join('\n'), /estimate_agent_minutes/);
 });
 
 test('proposed acceptance criteria are checked as acceptance, not as a basis file', () => {

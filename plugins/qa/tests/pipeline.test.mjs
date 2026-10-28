@@ -1,0 +1,279 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { CHECKS } from '../skills/pipeline/scripts/checks.mjs';
+import { advance, autonomyOf, continueDecision, describe, ledgerLine, readState, saveState, startPipeline } from '../skills/pipeline/scripts/pipeline.mjs';
+
+const CLI = fileURLToPath(new URL('../skills/pipeline/scripts/pipeline.mjs', import.meta.url));
+const cli = (root, ...args) => spawnSync('node', [CLI, ...args, '--root', root], { encoding: 'utf8' });
+
+const MANIFEST = {
+  pipelines: {
+    feature: {
+      stages: [
+        { id: 'intake', agent: 'qa-lead', exit: ['basis'] },
+        { id: 'analysis', agent: 'test-analyst', exit: ['review-not-blocked', 'register-section', 'cases'] },
+        { id: 'plan', agent: 'test-manager', exit: ['plan-exit-criteria'] },
+        { id: 'automate', agent: 'automation-engineer', parallel: true, exit: ['cases-automated'] },
+        { id: 'triage', agent: 'failure-triager', exit: ['failures-classed'] },
+        { id: 'review', agent: 'test-reviewer', when: 'risk >= medium', exit: ['review-recorded'] },
+        { id: 'report', agent: 'test-manager', exit: ['report-verdict'] },
+      ],
+    },
+  },
+};
+
+const T0 = '2026-10-27T10:00:00.000Z';
+const at = (minutes) => new Date(Date.parse(T0) + minutes * 60_000).toISOString();
+
+const FILES = {
+  basis: ['qa/basis/12.md', '---\nid: "#12"\n---\n\n# Promo codes\n'],
+  review: ['qa/basis/12.review.md', '---\nwork_item: "#12"\nverdict: ready\n---\n\n## Findings\n'],
+  register: ['qa/risk-register.md', '# Risk register\n\n## #12: Promo codes\n\n| Id | Risk | Likelihood | Impact | Level | Response |\n| --- | --- | --- | --- | --- | --- |\n| R-12-1 | Sale items discounted | medium | high | LEVEL | Decision table |\n'],
+  cases: ['qa/cases/12.md', '---\nwork_item: "#12"\n---\n\n| Id | Title | Risk | Basis | Technique | Level | Expected |\n| --- | --- | --- | --- | --- | --- | --- |\n| TC-12-01 | SAVE10 skips sale items | R-12-1 | C2 | decision-table | component | No discount |\n'],
+  plan: ['qa/plans/12.md', '---\nwork_item: "#12"\nestimate_hours: 2\n---\n\n## Exit criteria\n\n- Every case for R-12-1 passed.\n'],
+  test: ['src/promo.test.ts', "it('TC-12-01 SAVE10 skips sale items', () => {});"],
+  run: ['qa/runs/2026-10-27T10-30-00-unit-web.json', JSON.stringify({ format: 'alchemist-run/1', totals: { passed: 0, failed: 1, not_run: 0 }, tests: [{ title: 'TC-12-01 SAVE10 skips sale items', status: 'failed', message: 'x' }] })],
+  triage: ['qa/runs/2026-10-27T10-30-00-unit-web.triage.md', '| Test | Class |\n| --- | --- |\n| TC-12-01 | product-defect |\n'],
+  ledger: ['qa/state/12.md', '- 10:50 6. Review: qa:test-reviewer, no blocking finding\n'],
+  report: ['qa/reports/12.md', '---\nwork_item: "#12"\nkind: completion\nexit_criteria: not-met\n---\n\n# Report\n'],
+};
+
+function project({ level = 'high', profile = 'L1' } = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'pipeline-'));
+  const write = (key) => {
+    const [path, content] = FILES[key];
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), content.replace('LEVEL', level));
+  };
+  mkdirSync(join(root, 'qa'), { recursive: true });
+  writeFileSync(join(root, 'qa/profile.yaml'), `stack:\n  platforms: [web]\nautonomy: ${profile}\n`);
+  return { root, write };
+}
+
+const ctx = (root) => ({ root, item: '#12', file: '12' });
+
+test('each exit check says what is missing, and is met once its file is right', () => {
+  const { root, write } = project();
+  assert.deepEqual(CHECKS.basis(ctx(root)), { met: false, missing: ['qa/basis/12.md does not exist'] });
+  write('basis');
+  assert.equal(CHECKS.basis(ctx(root)).met, true);
+  assert.match(CHECKS['register-section'](ctx(root)).missing[0], /no "## #12:" section/);
+  write('register');
+  assert.equal(CHECKS['register-section'](ctx(root)).met, true);
+  assert.match(CHECKS['plan-exit-criteria'](ctx(root)).missing[0], /qa\/plans\/12\.md/);
+  write('cases');
+  assert.deepEqual(CHECKS['cases-automated'](ctx(root)).missing, ['TC-12-01 has no test and no not_automated reason']);
+  write('test');
+  assert.equal(CHECKS['cases-automated'](ctx(root)).met, true);
+  write('run');
+  assert.match(CHECKS['failures-classed'](ctx(root)).missing[0], /2026-10-27T10-30-00-unit-web\.triage\.md/);
+  write('triage');
+  assert.equal(CHECKS['failures-classed'](ctx(root)).met, true);
+  write('report');
+  assert.equal(CHECKS['report-verdict'](ctx(root)).met, true);
+});
+
+test('a not-ready review makes the analysis stage wait for the owner instead of failing', () => {
+  const { root, write } = project();
+  write('basis');
+  writeFileSync(join(root, FILES.review[0]), FILES.review[1].replace('verdict: ready', 'verdict: not-ready'));
+  const result = CHECKS['review-not-blocked'](ctx(root));
+  assert.equal(result.met, false);
+  assert.match(result.waiting, /not-ready/);
+});
+
+test('a basis review opens the analysis stage only with a verdict the check can read', () => {
+  const { root, write } = project();
+  write('review');
+  const path = join(root, FILES.review[0]);
+  writeFileSync(path, FILES.review[1].replace('verdict: ready', 'verdict: not-ready').replaceAll('\n', '\r\n'));
+  assert.match(CHECKS['review-not-blocked'](ctx(root)).waiting ?? '', /not-ready/, 'saved with Windows line endings');
+  writeFileSync(path, FILES.review[1].replace('verdict: ready', 'verdict: Not-Ready'));
+  assert.match(CHECKS['review-not-blocked'](ctx(root)).waiting ?? '', /not-ready/, 'written in capitals');
+  writeFileSync(path, `\n${FILES.review[1]}`);
+  const unreadable = CHECKS['review-not-blocked'](ctx(root));
+  assert.equal(unreadable.met, false);
+  assert.match(unreadable.missing[0], /verdict/);
+});
+
+test('the testware review counts only when the ledger has a line from qa:test-reviewer', () => {
+  const { root } = project();
+  mkdirSync(join(root, 'qa/state'), { recursive: true });
+  const ledger = join(root, 'qa/state/12.md');
+  writeFileSync(
+    ledger,
+    '- 10:05 2. Basis review: qa:test-analyst, ready (test-basis-review)\n' +
+      '- 2026-10-27T10:40:00.000Z feature pipeline for #12: running at stage review. Time per stage: intake 5 min; review 5 min.\n',
+  );
+  assert.match(CHECKS['review-recorded'](ctx(root)).missing[0], /qa:test-reviewer/);
+  writeFileSync(ledger, FILES.ledger[1], { flag: 'a' });
+  assert.equal(CHECKS['review-recorded'](ctx(root)).met, true);
+});
+
+test('the automation check fails when the trace has no cases for the work item', () => {
+  const { root, write } = project();
+  write('cases');
+  writeFileSync(join(root, FILES.cases[0]), FILES.cases[1].replace('work_item: "#12"', 'work_item: 12'));
+  assert.match(CHECKS['cases-automated'](ctx(root)).missing[0] ?? '', /no cases for #12/);
+});
+
+test('triage is done only when every failure in the latest run of each capability has a class', () => {
+  const { root } = project();
+  mkdirSync(join(root, 'qa/runs'), { recursive: true });
+  const run = (name, failed) => writeFileSync(join(root, 'qa/runs', name), JSON.stringify({ format: 'alchemist-run/1', totals: { passed: 1, failed, not_run: 0 }, tests: [] }));
+  run('2026-10-27T09-00-00-unit-web.json', 2);
+  run('2026-10-27T10-00-00-unit-web.json', 0);
+  assert.equal(CHECKS['failures-classed'](ctx(root)).met, true, 'an older failing run of the same capability no longer counts');
+  run('2026-10-27T10-00-00-unit-mobile.json', 2);
+  writeFileSync(join(root, 'qa/runs/2026-10-27T10-00-00-unit-mobile.triage.md'), '| Test | Case | Class |\n| --- | --- | --- |\n| a | TC-12-01 | `product-defect` |\n');
+  assert.deepEqual(CHECKS['failures-classed'](ctx(root)).missing, ['qa/runs/2026-10-27T10-00-00-unit-mobile.triage.md classes 1 of 2 failures']);
+  writeFileSync(join(root, 'qa/runs/2026-10-27T11-00-00-unit-web.json'), '{"totals":');
+  assert.ok(CHECKS['failures-classed'](ctx(root)).missing.includes('qa/runs/2026-10-27T11-00-00-unit-web.json cannot be read'));
+  const crashed = { numFailedTests: 0, testResults: [{ name: '/app/src/cart.test.ts', status: 'failed', message: 'Error: Cannot find module', assertionResults: [] }] };
+  writeFileSync(join(root, 'qa/runs/2026-10-27T11-00-00-unit-web.json'), JSON.stringify(crashed));
+  assert.ok(CHECKS['failures-classed'](ctx(root)).missing.some((line) => /11-00-00-unit-web\.triage\.md does not exist: 1 failure/.test(line)), 'a suite that never ran is a failure');
+});
+
+test('the engine moves through every stage as its files appear, and records time per stage', () => {
+  const { root, write } = project();
+  let state = startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST);
+  assert.equal(state.stage, 'intake');
+  const steps = [
+    [['basis'], 'analysis'],
+    [['review', 'register', 'cases'], 'plan'],
+    [['plan'], 'automate'],
+    [['test', 'run'], 'triage'],
+    [['triage'], 'review'],
+    [['ledger'], 'report'],
+  ];
+  steps.forEach(([keys, next], index) => {
+    keys.forEach(write);
+    ({ state } = advance(root, state, MANIFEST, at(10 * (index + 1))));
+    assert.equal(state.stage, next, `after ${keys.join(', ')}`);
+  });
+  write('report');
+  ({ state } = advance(root, state, MANIFEST, at(70)));
+  assert.equal(state.status, 'done');
+  assert.equal(state.stages.intake.finished, at(10));
+  assert.deepEqual(readState(root, '12'), state, 'the state is saved');
+  assert.match(ledgerLine(state), /intake 10 min/);
+});
+
+test('a work item with only low risks skips the testware review', () => {
+  const { root, write } = project({ level: 'low' });
+  ['basis', 'review', 'register', 'cases', 'plan', 'test', 'run', 'triage'].forEach(write);
+  const { state } = advance(root, startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST), MANIFEST, at(5));
+  assert.equal(state.stage, 'report');
+  assert.equal(state.stages.review, undefined);
+});
+
+test('at L1 the lead is sent on to the next stage, at most three times per stage, then the pipeline stops', () => {
+  const { root, write } = project();
+  write('basis');
+  let state = startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const decision = continueDecision(root, state, MANIFEST, { autonomy: 'L1', now: at(attempt) });
+    assert.equal(decision.block, true, `attempt ${attempt}`);
+    assert.match(decision.reason, /analysis/);
+    assert.match(decision.reason, /qa:test-analyst/);
+    state = readState(root, '12');
+  }
+  const last = continueDecision(root, state, MANIFEST, { autonomy: 'L1', now: at(4) });
+  assert.equal(last.block, false);
+  assert.equal(readState(root, '12').status, 'stopped');
+  assert.match(readState(root, '12').reason, /analysis.*3 attempts/);
+});
+
+test('at L0, or while waiting for the owner, nothing is blocked', () => {
+  const { root, write } = project({ profile: 'L0' });
+  write('basis');
+  const state = startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST);
+  assert.equal(continueDecision(root, state, MANIFEST, { autonomy: 'L0', now: at(1) }).block, false);
+  writeFileSync(join(root, FILES.review[0]), FILES.review[1].replace('verdict: ready', 'verdict: not-ready'));
+  const waiting = continueDecision(root, readState(root, '12'), MANIFEST, { autonomy: 'L1', now: at(2) });
+  assert.equal(waiting.block, false);
+  assert.equal(readState(root, '12').status, 'waiting');
+});
+
+test('the description names the stage, its agent, and what is missing', () => {
+  const { root } = project();
+  const state = startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST);
+  const text = describe(root, state, MANIFEST);
+  assert.match(text, /#12.*stage intake \(1 of 7\)/);
+  assert.match(text, /qa\/basis\/12\.md does not exist/);
+  saveState(root, { ...state, status: 'done' });
+  assert.match(describe(root, readState(root, '12'), MANIFEST), /done/);
+  assert.match(readFileSync(join(root, 'qa/state/12.pipeline.json'), 'utf8'), /"pipeline": "feature"/);
+});
+
+test('a medium or high risk, in any case of letters, keeps the testware review', () => {
+  for (const level of ['medium', 'Medium', 'HIGH']) {
+    const { root, write } = project({ level });
+    ['basis', 'review', 'register', 'cases', 'plan', 'test', 'run', 'triage'].forEach(write);
+    const { state } = advance(root, startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST), MANIFEST, at(5));
+    assert.equal(state.stage, 'review', level);
+  }
+});
+
+test('the CLI starts a pipeline, moves it on, reports it, resumes on a second start, and refuses what it cannot use', () => {
+  const { root, write } = project();
+  write('basis');
+  const started = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.equal(started.status, 0, started.stderr);
+  assert.match(started.stdout, /stage analysis \(2 of 7\)/);
+  ['review', 'register', 'cases'].forEach(write);
+  assert.match(cli(root, 'next').stdout, /stage plan/);
+  assert.match(cli(root, 'status').stdout, /#12.*stage plan/);
+  const tried = readState(root, '12');
+  tried.stages.plan.attempts = 2;
+  saveState(root, tried);
+  const again = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.match(again.stdout, /stage plan/, 'a second start resumes the engagement');
+  assert.equal(readState(root, '12').stages.plan.attempts, 2, 'and resets nothing');
+  for (const args of [
+    ['start', 'feature', '--item', '#12 x', '--file', '12'],
+    ['start', 'feature', '--item', '#12', '--file', '../12'],
+    ['start', 'toString', '--item', '#13', '--file', '13'],
+    ['next', '--file', '13'],
+  ]) {
+    assert.equal(cli(root, ...args).status, 2, args.join(' '));
+  }
+});
+
+test('start never restarts a stopped pipeline: a person decides that', () => {
+  const { root } = project();
+  saveState(root, { pipeline: 'feature', item: '#12', file: '12', status: 'stopped', stage: 'analysis', stages: { analysis: { started: T0, attempts: 3, tokens: 0 } }, updated: T0 });
+  const result = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /stopped at stage analysis/);
+  assert.equal(readState(root, '12').stages.analysis.attempts, 3);
+});
+
+test('the autonomy level is read whether or not it is quoted', () => {
+  const { root } = project();
+  for (const value of ['L1', '"L1"', "'L1'"]) {
+    writeFileSync(join(root, 'qa/profile.yaml'), `stack:\n  platforms: [web]\nautonomy: ${value}\n`);
+    assert.equal(autonomyOf(root), 'L1', value);
+  }
+});
+
+test('state is read and written only under qa/state, by a work item file name', () => {
+  const { root } = project();
+  const state = { pipeline: 'feature', item: '#12', file: '../escaped', status: 'running', stage: 'intake', stages: {}, updated: T0 };
+  assert.throws(() => saveState(root, state), /file name/);
+  mkdirSync(join(root, 'qa/state'), { recursive: true });
+  writeFileSync(join(root, 'qa/escaped.pipeline.json'), JSON.stringify(state));
+  assert.equal(readState(root, '../escaped'), null);
+});
+
+test('the pipeline schema lists exactly the checks the engine has', async () => {
+  const { CHECK_NAMES } = await import('../skills/pipeline/scripts/checks.mjs');
+  const schema = JSON.parse(readFileSync(new URL('../schemas/pipelines.schema.json', import.meta.url), 'utf8'));
+  const stage = schema.properties.pipelines.additionalProperties.properties.stages.items;
+  assert.deepEqual(stage.properties.exit.items.enum, CHECK_NAMES);
+});
