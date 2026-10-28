@@ -21,7 +21,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'qa', 'dist', 'build', 'cover
 
 /** A small YAML subset: scalars, quoted strings, [inline, lists], and one level of nested map or list. */
 export function parseFrontmatter(text) {
-  const match = text.match(/^---\n([\s\S]*?)\n---/);
+  const match = text.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
   const scalar = (raw) => {
     const value = raw.trim();
@@ -134,6 +134,8 @@ function testsByCase(root) {
 }
 
 export const STATUS = { passed: 'passed', failed: 'failed', pending: 'not-run', skipped: 'not-run', todo: 'not-run', disabled: 'not-run' };
+// The format of a slim run, which runs.mjs writes in place of a raw report.
+export const SLIM_FORMAT = 'alchemist-run/1';
 
 const SEVERITY = { passed: 0, 'not-run': 1, failed: 2 };
 
@@ -159,7 +161,7 @@ function resultsByCase(root) {
         continue;
       }
       // A slim run from runs.mjs keeps its tests already in the trace's terms.
-      for (const slim of report.format === 'alchemist-run/1' ? report.tests : []) record(slim.title, slim.status);
+      for (const slim of report.format === SLIM_FORMAT ? report.tests : []) record(slim.title, slim.status);
       for (const suite of report.testResults ?? []) {
         for (const assertion of suite.assertionResults ?? []) {
           record(assertion.fullName ?? assertion.title ?? '', STATUS[assertion.status] ?? 'not-run');

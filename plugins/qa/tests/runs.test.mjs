@@ -54,6 +54,23 @@ test('a slim run keeps every failure and every test that names a case, and count
   ]);
 });
 
+test('a suite that fails before its tests run is kept as a failure, with its message and a project-relative path', () => {
+  const report = {
+    numFailedTests: 0,
+    testResults: [{ name: '/app/src/cart.test.ts', status: 'failed', message: 'Error: Cannot find module ./cart\n    at load', assertionResults: [] }],
+  };
+  const slim = slimRun(report, '/app');
+  assert.deepEqual(slim.totals, { passed: 0, failed: 1, not_run: 0 });
+  assert.deepEqual(slim.tests, [{ title: 'src/cart.test.ts', status: 'failed', message: 'Error: Cannot find module ./cart' }]);
+});
+
+test('a JSON file that is not a Jest-format report, or does not parse, is left as it is', () => {
+  const root = project({ 'qa/runs/2026-10-27T10-00-00-e2e-web.json': { suites: [] }, 'qa/runs/2026-10-27T10-00-00-unit-web.json': '{"testResults": [' });
+  assert.deepEqual(compactRuns(root), []);
+  assert.equal(readFileSync(join(root, 'qa/runs/2026-10-27T10-00-00-e2e-web.json'), 'utf8'), '{"suites":[]}');
+  assert.equal(readFileSync(join(root, 'qa/runs/2026-10-27T10-00-00-unit-web.json'), 'utf8'), '{"testResults": [');
+});
+
 test('compacting runs gives the trace the same case results as the raw reports', () => {
   const files = {
     'qa/cases/12.md': '---\nwork_item: "#12"\n---\n\n| Id | Title | Risk | Basis | Technique | Level | Expected |\n| --- | --- | --- | --- | --- | --- | --- |\n| TC-12-01 | a | R-12-1 | C1 | boundary-value | component | x |\n| TC-12-02 | b | R-12-1 | C1 | boundary-value | component | y |\n',

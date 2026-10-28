@@ -5,7 +5,8 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildTrace, coverage, parseFrontmatter } from '../../traceability/scripts/trace.mjs';
+import { slimRun } from '../../traceability/scripts/runs.mjs';
+import { buildTrace, coverage, parseFrontmatter, SLIM_FORMAT } from '../../traceability/scripts/trace.mjs';
 
 const read = (root, path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : null);
 const result = (missing, waiting) => ({ met: missing.length === 0 && !waiting, missing, ...(waiting && { waiting }) });
@@ -42,16 +43,25 @@ function latestRuns(root) {
   return [...latest.values()];
 }
 
+/** The failures in a run file, counting a suite that failed before its tests ran, or null when it cannot be read. */
 function failures(text, name) {
   if (name.endsWith('.xml')) return (text.match(/<(failure|error)\b/g) ?? []).length;
   try {
     const run = JSON.parse(text);
-    if (run.totals) return run.totals.failed;
-    return run.numFailedTests ?? 0;
+    if (run.format === SLIM_FORMAT && Number.isInteger(run.totals?.failed)) return run.totals.failed;
+    if (Array.isArray(run.testResults)) return slimRun(run).totals.failed;
+    return null;
   } catch {
-    return 0;
+    return null;
   }
 }
+
+const CLASSES = new Set(['product-defect', 'test-defect', 'environment', 'flaky', 'question']);
+/** The rows of a triage file that give a failure one of the classes. */
+const classedRows = (text) =>
+  text.split('\n').filter((line) => line.trimStart().startsWith('|') && line.split('|').some((cell) => CLASSES.has(cell.trim().replaceAll('`', '')))).length;
+
+const VERDICTS = new Set(['ready', 'ready-with-assumptions', 'not-ready']);
 
 export const CHECKS = {
   basis: ({ root, file }) => result(read(root, `qa/basis/${file}.md`) === null ? [absent(`qa/basis/${file}.md`)] : []),
@@ -60,7 +70,8 @@ export const CHECKS = {
     const path = `qa/basis/${file}.review.md`;
     const text = read(root, path);
     if (text === null) return result([absent(path)]);
-    const { verdict } = parseFrontmatter(text);
+    const verdict = String(parseFrontmatter(text).verdict ?? '').toLowerCase();
+    if (!VERDICTS.has(verdict)) return result([`${path} has no verdict: ready, ready-with-assumptions, or not-ready`]);
     if (verdict === 'not-ready') return result([], 'the basis review is not-ready: the owner must settle its contradictions first');
     return result([]);
   },
@@ -88,8 +99,12 @@ export const CHECKS = {
 
   'cases-automated': ({ root, item, file }) => {
     if (read(root, `qa/cases/${file}.md`) === null) return result([absent(`qa/cases/${file}.md`)]);
-    const report = coverage(buildTrace(root), item);
-    return result(report.cases_without_tests.map((id) => `${id} has no test and no not_automated reason`));
+    const trace = buildTrace(root);
+    // With no cases under the item, there would be no gaps to report: that is not done.
+    if (!trace.items.some((entry) => entry.work_item === item && entry.cases.length > 0)) {
+      return result([`the trace has no cases for ${item}: check work_item in qa/cases/${file}.md`]);
+    }
+    return result(coverage(trace, item).cases_without_tests.map((id) => `${id} has no test and no not_automated reason`));
   },
 
   'failures-classed': ({ root }) => {
@@ -98,15 +113,24 @@ export const CHECKS = {
     const missing = [];
     for (const name of runs) {
       const count = failures(read(root, `qa/runs/${name}`) ?? '', name);
+      if (count === null) {
+        missing.push(`qa/runs/${name} cannot be read`);
+        continue;
+      }
+      if (count === 0) continue;
       const triage = `qa/runs/${name.replace(/\.(json|xml)$/, '.triage.md')}`;
-      if (count > 0 && read(root, triage) === null) missing.push(`${triage} does not exist: ${count} failure(s) to class`);
+      const text = read(root, triage);
+      if (text === null) missing.push(`${triage} does not exist: ${count} failure(s) to class`);
+      else if (classedRows(text) < count) missing.push(`${triage} classes ${classedRows(text)} of ${count} failures`);
     }
     return result(missing);
   },
 
+  // The ledger is the only record of qa:test-reviewer's work. The engine's own ledger lines never name an agent, so
+  // they cannot satisfy this check.
   'review-recorded': ({ root, file }) => {
     const ledger = read(root, `qa/state/${file}.md`) ?? '';
-    return result(/\breview\b/i.test(ledger) ? [] : [`qa/state/${file}.md records no testware review`]);
+    return result(/^-.*\btest-reviewer\b/m.test(ledger) ? [] : [`qa/state/${file}.md has no line from qa:test-reviewer`]);
   },
 
   'report-verdict': ({ root, file }) => {

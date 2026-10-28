@@ -8,27 +8,38 @@
  * No npm dependencies: this runs in any project.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { CASE_ID, STATUS } from './trace.mjs';
+import { CASE_ID, SLIM_FORMAT, STATUS } from './trace.mjs';
 
-export const SLIM_FORMAT = 'alchemist-run/1';
 const MESSAGE_LENGTH = 300;
+const firstLine = (message) => String(message ?? '').split('\n')[0].slice(0, MESSAGE_LENGTH);
 
-/** @param {object} report a Jest-format JSON report */
-export function slimRun(report) {
+/**
+ * @param {object} report a Jest-format JSON report
+ * @param {string} [root] the project root, so a suite that failed to run is named by its path in the project
+ */
+export function slimRun(report, root) {
   const totals = { passed: 0, failed: 0, not_run: 0 };
   const tests = [];
   for (const suite of report.testResults ?? []) {
-    for (const assertion of suite.assertionResults ?? []) {
+    const assertions = suite.assertionResults ?? [];
+    // A suite that failed before any test ran (a bad import, a syntax error) has no failed test of its own.
+    if (suite.status === 'failed' && !assertions.some((assertion) => assertion.status === 'failed')) {
+      const name = String(suite.name ?? '');
+      const title = root && isAbsolute(name) && !relative(root, name).startsWith('..') ? relative(root, name) : basename(name);
+      totals.failed += 1;
+      tests.push({ title, status: 'failed', message: firstLine(suite.message ?? suite.failureMessage) });
+    }
+    for (const assertion of assertions) {
       const title = assertion.fullName ?? assertion.title ?? '';
       const status = STATUS[assertion.status] ?? 'not-run';
       totals[status === 'not-run' ? 'not_run' : status] += 1;
       const namesCase = (title.match(CASE_ID) ?? []).length > 0;
       if (status !== 'failed' && !namesCase) continue;
       const entry = { title, status };
-      if (status === 'failed') entry.message = String(assertion.failureMessages?.[0] ?? '').split('\n')[0].slice(0, MESSAGE_LENGTH);
+      if (status === 'failed') entry.message = firstLine(assertion.failureMessages?.[0]);
       tests.push(entry);
     }
   }
@@ -49,7 +60,7 @@ export function compactRuns(root) {
       continue;
     }
     if (report.format === SLIM_FORMAT || !Array.isArray(report.testResults)) continue;
-    writeFileSync(path, `${JSON.stringify(slimRun(report))}\n`);
+    writeFileSync(path, `${JSON.stringify(slimRun(report, root))}\n`);
     changed.push(path);
   }
   return changed;

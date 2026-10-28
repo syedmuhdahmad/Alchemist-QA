@@ -82,6 +82,58 @@ test('a not-ready review makes the analysis stage wait for the owner instead of 
   assert.match(result.waiting, /not-ready/);
 });
 
+test('a basis review opens the analysis stage only with a verdict the check can read', () => {
+  const { root, write } = project();
+  write('review');
+  const path = join(root, FILES.review[0]);
+  writeFileSync(path, FILES.review[1].replace('verdict: ready', 'verdict: not-ready').replaceAll('\n', '\r\n'));
+  assert.match(CHECKS['review-not-blocked'](ctx(root)).waiting ?? '', /not-ready/, 'saved with Windows line endings');
+  writeFileSync(path, FILES.review[1].replace('verdict: ready', 'verdict: Not-Ready'));
+  assert.match(CHECKS['review-not-blocked'](ctx(root)).waiting ?? '', /not-ready/, 'written in capitals');
+  writeFileSync(path, `\n${FILES.review[1]}`);
+  const unreadable = CHECKS['review-not-blocked'](ctx(root));
+  assert.equal(unreadable.met, false);
+  assert.match(unreadable.missing[0], /verdict/);
+});
+
+test('the testware review counts only when the ledger has a line from qa:test-reviewer', () => {
+  const { root } = project();
+  mkdirSync(join(root, 'qa/state'), { recursive: true });
+  const ledger = join(root, 'qa/state/12.md');
+  writeFileSync(
+    ledger,
+    '- 10:05 2. Basis review: qa:test-analyst, ready (test-basis-review)\n' +
+      '- 2026-10-27T10:40:00.000Z feature pipeline for #12: running at stage review. Time per stage: intake 5 min; review 5 min.\n',
+  );
+  assert.match(CHECKS['review-recorded'](ctx(root)).missing[0], /qa:test-reviewer/);
+  writeFileSync(ledger, FILES.ledger[1], { flag: 'a' });
+  assert.equal(CHECKS['review-recorded'](ctx(root)).met, true);
+});
+
+test('the automation check fails when the trace has no cases for the work item', () => {
+  const { root, write } = project();
+  write('cases');
+  writeFileSync(join(root, FILES.cases[0]), FILES.cases[1].replace('work_item: "#12"', 'work_item: 12'));
+  assert.match(CHECKS['cases-automated'](ctx(root)).missing[0] ?? '', /no cases for #12/);
+});
+
+test('triage is done only when every failure in the latest run of each capability has a class', () => {
+  const { root } = project();
+  mkdirSync(join(root, 'qa/runs'), { recursive: true });
+  const run = (name, failed) => writeFileSync(join(root, 'qa/runs', name), JSON.stringify({ format: 'alchemist-run/1', totals: { passed: 1, failed, not_run: 0 }, tests: [] }));
+  run('2026-10-27T09-00-00-unit-web.json', 2);
+  run('2026-10-27T10-00-00-unit-web.json', 0);
+  assert.equal(CHECKS['failures-classed'](ctx(root)).met, true, 'an older failing run of the same capability no longer counts');
+  run('2026-10-27T10-00-00-unit-mobile.json', 2);
+  writeFileSync(join(root, 'qa/runs/2026-10-27T10-00-00-unit-mobile.triage.md'), '| Test | Case | Class |\n| --- | --- | --- |\n| a | TC-12-01 | `product-defect` |\n');
+  assert.deepEqual(CHECKS['failures-classed'](ctx(root)).missing, ['qa/runs/2026-10-27T10-00-00-unit-mobile.triage.md classes 1 of 2 failures']);
+  writeFileSync(join(root, 'qa/runs/2026-10-27T11-00-00-unit-web.json'), '{"totals":');
+  assert.ok(CHECKS['failures-classed'](ctx(root)).missing.includes('qa/runs/2026-10-27T11-00-00-unit-web.json cannot be read'));
+  const crashed = { numFailedTests: 0, testResults: [{ name: '/app/src/cart.test.ts', status: 'failed', message: 'Error: Cannot find module', assertionResults: [] }] };
+  writeFileSync(join(root, 'qa/runs/2026-10-27T11-00-00-unit-web.json'), JSON.stringify(crashed));
+  assert.ok(CHECKS['failures-classed'](ctx(root)).missing.some((line) => /11-00-00-unit-web\.triage\.md does not exist: 1 failure/.test(line)), 'a suite that never ran is a failure');
+});
+
 test('the engine moves through every stage as its files appear, and records time per stage', () => {
   const { root, write } = project();
   let state = startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST);
