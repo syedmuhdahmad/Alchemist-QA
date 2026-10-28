@@ -20,10 +20,12 @@ import { activeState, addTokens, advance, allStates, autonomyOf, continueDecisio
 const SEND_BACK = 2;
 // A specialist that never reported back stops counting as running after this long.
 const RUNNING_FOR = 2 * 60 * 60 * 1000;
+// Hook processes read the clock a moment apart, and a VM's clock can step back: allow that much, not a planted date.
+const CLOCK_SKEW = 60 * 1000;
 const stillRunning = (state, now) =>
   (state.running ?? []).filter((entry) => {
     const elapsed = Date.parse(now) - Date.parse(entry?.started);
-    return elapsed >= 0 && elapsed < RUNNING_FOR;
+    return elapsed > -CLOCK_SKEW && elapsed < RUNNING_FOR;
   });
 
 /**

@@ -155,6 +155,8 @@ test('a specialist entry from the future, or older than two hours, does not hold
     assert.equal(run(project({ fields: { running: [{ id: 'a1', started }] } }), { hook_event_name: 'Stop' })?.decision, 'block', started);
   }
   assert.equal(run(project({ fields: { running: [{ id: 'a1', started: hours(1) }] } }), { hook_event_name: 'Stop' }), null);
+  // Hook processes can read clocks a moment apart: an entry a few seconds ahead is still a specialist at work.
+  assert.equal(run(project({ fields: { running: [{ id: 'a1', started: hours(-0.001) }] } }), { hook_event_name: 'Stop' }), null, 'clock skew');
 });
 
 test('specialists that start and stop together are all tracked: the hooks take turns with the state', async () => {

@@ -8,7 +8,7 @@
  *   node pipeline.mjs status [--root <dir>]
  * No npm dependencies: plugins run on the user's machine as shipped.
  */
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -71,9 +71,11 @@ export function withStateLock(root, fn, { wait = 10_000 } = {}) {
   mkdirSync(join(root, 'qa', 'state'), { recursive: true });
   const lock = join(root, 'qa', 'state', '.lock');
   const until = Date.now() + wait;
+  // Only the hook that took the lock removes it, even after another has judged it stale.
+  const token = `${process.pid}-${Math.random()}`;
   for (;;) {
     try {
-      closeSync(openSync(lock, 'wx'));
+      writeFileSync(lock, token, { flag: 'wx' });
       break;
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
@@ -89,7 +91,11 @@ export function withStateLock(root, fn, { wait = 10_000 } = {}) {
   try {
     return fn();
   } finally {
-    rmSync(lock, { force: true });
+    try {
+      if (readFileSync(lock, 'utf8') === token) rmSync(lock, { force: true });
+    } catch {
+      // Already gone.
+    }
   }
 }
 
