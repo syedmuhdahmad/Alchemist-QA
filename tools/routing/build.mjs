@@ -92,7 +92,10 @@ export function buildPipelines(yamlText, known) {
   const errors = schemaErrors('pipelines.yaml', yamlText);
   if (errors.length > 0) return { manifest: null, errors };
   const data = parse(yamlText);
-  for (const { stages } of Object.values(data.pipelines)) {
+  for (const [name, { stages }] of Object.entries(data.pipelines)) {
+    const ids = stages.map((stage) => stage.id);
+    // A repeated id would send the engine back to an earlier stage, round and round.
+    for (const id of new Set(ids.filter((id, index) => ids.indexOf(id) !== index))) errors.push(`stage ${id} appears twice in pipeline ${name}`);
     for (const stage of stages) {
       if (!known.agents.includes(stage.agent)) errors.push(`stage ${stage.id} names agent ${stage.agent}, which does not exist`);
       if (stage.method && !known.skills[stage.method]) errors.push(`stage ${stage.id} names skill ${stage.method}, which no single plugin has`);

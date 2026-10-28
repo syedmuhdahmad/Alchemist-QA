@@ -115,4 +115,6 @@ test('the pipelines manifest names agents and skills that exist, and keeps every
   assert.ok(bad.errors.some((e) => /stage design names agent tester/.test(e)), bad.errors.join('\n'));
   assert.ok(bad.errors.some((e) => /stage design names skill nope/.test(e)), bad.errors.join('\n'));
   assert.ok(buildPipelines(yaml.replace('exit: [basis]', 'exit: [bassis]'), KNOWN).errors.length > 0);
+  const twice = buildPipelines(yaml.replace('- id: design', '- id: intake'), KNOWN);
+  assert.ok(twice.errors.some((e) => /stage intake appears twice in pipeline feature/.test(e)), twice.errors.join('\n'));
 });

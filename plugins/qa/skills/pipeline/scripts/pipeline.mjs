@@ -8,7 +8,7 @@
  *   node pipeline.mjs status [--root <dir>]
  * No npm dependencies: plugins run on the user's machine as shipped.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { argv, exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -22,10 +22,13 @@ export function loadPipelines() {
 }
 
 // A work item's file name and id, as `start` accepts them. State files are committed with the project, so a state is
-// trusted only with these: then no hook writes outside qa/state, and no session is shown text the engine never wrote.
+// used only when its file name, id, pipeline, stage, status, and time are ones the engine could have written: then no
+// hook writes outside qa/state. Sessions are told where the work stands from the files, never from the state's text.
 export const FILE = /^[A-Za-z0-9-]+$/;
 export const ITEM = /^[#A-Za-z0-9-]+$/;
 const SUFFIX = '.pipeline.json';
+const STATUSES = new Set(['running', 'waiting', 'done', 'stopped']);
+const DAY = 24 * 60 * 60 * 1000;
 
 function statePath(root, file) {
   if (typeof file !== 'string' || !FILE.test(file)) throw new Error(`not a work item file name: ${file}`);
@@ -47,8 +50,47 @@ export function readState(root, file, manifest = loadPipelines()) {
     return null;
   }
   const pipeline = state && typeof state === 'object' && Object.hasOwn(manifest.pipelines, state.pipeline) ? manifest.pipelines[state.pipeline] : null;
-  const known = pipeline?.stages.some((stage) => stage.id === state.stage) && typeof state.item === 'string' && ITEM.test(state.item);
+  const updated = Date.parse(state?.updated);
+  const known =
+    pipeline?.stages.some((stage) => stage.id === state.stage) &&
+    typeof state.item === 'string' &&
+    ITEM.test(state.item) &&
+    STATUSES.has(state.status) &&
+    updated <= Date.now() + DAY &&
+    typeof state.stages?.[state.stage] === 'object' &&
+    (state.running === undefined || Array.isArray(state.running));
   return known ? { ...state, file } : null;
+}
+
+/**
+ * Runs fn while holding qa/state/.lock, so hooks that fire together (parallel specialists stopping at once) take turns
+ * with the state instead of overwriting each other's changes. A lock older than STALE is left from a killed hook.
+ */
+export function withStateLock(root, fn, { wait = 10_000 } = {}) {
+  const STALE = 30_000;
+  mkdirSync(join(root, 'qa', 'state'), { recursive: true });
+  const lock = join(root, 'qa', 'state', '.lock');
+  const until = Date.now() + wait;
+  for (;;) {
+    try {
+      closeSync(openSync(lock, 'wx'));
+      break;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      try {
+        if (Date.now() - statSync(lock).mtimeMs > STALE) rmSync(lock, { force: true });
+      } catch {
+        // Released between the two calls: try again.
+      }
+      if (Date.now() > until) throw new Error('qa/state is locked by another hook');
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    rmSync(lock, { force: true });
+  }
 }
 
 export function saveState(root, state) {
@@ -58,7 +100,7 @@ export function saveState(root, state) {
 }
 
 /** Every state in qa/state that the engine could have written. */
-function allStates(root, manifest) {
+export function allStates(root, manifest = loadPipelines()) {
   const dir = join(root, 'qa', 'state');
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
@@ -95,7 +137,13 @@ export function evaluate(root, state, stage) {
 }
 
 export function startPipeline(root, { pipeline, item, file, now }, manifest = loadPipelines()) {
-  if (!manifest.pipelines[pipeline]) throw new Error(`there is no pipeline named ${pipeline}`);
+  if (!Object.hasOwn(manifest.pipelines, pipeline)) throw new Error(`there is no pipeline named ${pipeline}`);
+  const existing = readState(root, file, manifest);
+  if (existing?.status === 'stopped') {
+    throw new Error(`${describe(root, existing, manifest)} A person decides whether to start it again, by deleting qa/state/${file}.pipeline.json.`);
+  }
+  // A second start resumes the engagement, so its attempts, time, and tokens are never reset.
+  if (existing && existing.status !== 'done' && existing.pipeline === pipeline) return existing;
   const [first] = manifest.pipelines[pipeline].stages;
   const state = {
     pipeline,
@@ -149,12 +197,18 @@ export function advance(root, state, manifest = loadPipelines(), now = new Date(
 export function describe(root, state, manifest = loadPipelines(), missing) {
   const name = `Engagement ${state.item} (${state.pipeline} pipeline)`;
   if (state.status === 'done') return `${name} is done: every stage passed its exit checks.`;
-  if (state.status === 'stopped') return `${name} stopped at stage ${state.stage}: ${state.reason}`;
   const stages = stagesOf(manifest, state);
   const index = stages.findIndex((stage) => stage.id === state.stage);
   const stage = stages[index];
-  if (state.status === 'waiting') return `${name} is waiting at stage ${state.stage}: ${state.reason}.`;
+  // Told from the files, never from the reason stored in the state: the state is committed with the project.
+  if (state.status === 'waiting') {
+    const why = evaluate(root, state, stage).waiting ?? 'it may be able to go on: run `next` to check';
+    return `${name} is waiting at stage ${state.stage}: ${why}.`;
+  }
   const needs = missing ?? evaluate(root, state, stage).missing;
+  if (state.status === 'stopped') {
+    return `${name} stopped at stage ${state.stage}: it did not finish after ${MAX_ATTEMPTS} attempts. Missing: ${needs.join('; ') || 'nothing'}.`;
+  }
   const skill = stage.method ? ` with skill ${stage.method}` : '';
   const parallel = stage.parallel ? ', one per capability in qa/profile.yaml, in parallel' : '';
   return (
@@ -189,10 +243,10 @@ export function addTokens(state, tokens) {
   return state;
 }
 
-/** A ledger line for qa/state/<file>.md: status, time and tokens per stage. */
-export function ledgerLine(state) {
+/** A ledger line for qa/state/<file>.md: status, time and tokens per stage, with an open stage timed until now. */
+export function ledgerLine(state, now = state.updated) {
   const parts = Object.entries(state.stages).map(([id, entry]) => {
-    const end = Date.parse(entry.finished ?? state.updated);
+    const end = Date.parse(entry.finished ?? now);
     const minutes = Math.round((end - Date.parse(entry.started)) / 60_000);
     return `${id} ${minutes} min${entry.tokens ? `, ${entry.tokens} tokens` : ''}`;
   });
@@ -202,7 +256,7 @@ export function ledgerLine(state) {
 /** The autonomy level in qa/profile.yaml, or L0 when it says none. */
 export function autonomyOf(root) {
   const path = join(root, 'qa', 'profile.yaml');
-  const match = existsSync(path) && readFileSync(path, 'utf8').match(/^autonomy:\s*(L\d)\b/m);
+  const match = existsSync(path) && readFileSync(path, 'utf8').match(/^autonomy:\s*["']?(L\d)\b/m);
   return match ? match[1] : 'L0';
 }
 
@@ -223,21 +277,29 @@ function main(args) {
     if (!pipeline || !item || !file) return fail('usage: pipeline.mjs start <pipeline> --item <id> --file <file>');
     if (!ITEM.test(item) || !FILE.test(file)) return fail('--item and --file take a work item id and its file name, such as #12 and 12');
     try {
-      const started = startPipeline(root, { pipeline, item, file, now: new Date().toISOString() });
-      const { state, missing } = advance(root, started);
-      console.log(describe(root, state, loadPipelines(), missing));
+      return withStateLock(root, () => {
+        const started = startPipeline(root, { pipeline, item, file, now: new Date().toISOString() });
+        const { state, missing } = advance(root, started);
+        console.log(describe(root, state, loadPipelines(), missing));
+        return 0;
+      });
     } catch (error) {
       return fail(error.message);
     }
-    return 0;
   }
   if (command === 'next') {
     const file = option('--file');
-    const current = file ? readState(root, file) : activeState(root);
-    if (!current) return fail(file ? `no pipeline state for ${file}` : 'no pipeline is running');
-    const { state, missing } = advance(root, current);
-    console.log(describe(root, state, loadPipelines(), missing));
-    return 0;
+    try {
+      return withStateLock(root, () => {
+        const current = file ? readState(root, file) : activeState(root);
+        if (!current) return fail(file ? `no pipeline state for ${file}` : 'no pipeline is running');
+        const { state, missing } = advance(root, current);
+        console.log(describe(root, state, loadPipelines(), missing));
+        return 0;
+      });
+    } catch (error) {
+      return fail(error.message);
+    }
   }
   if (command === 'status') {
     const states = allStates(root, loadPipelines());

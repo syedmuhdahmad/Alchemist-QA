@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CHECKS } from '../skills/pipeline/scripts/checks.mjs';
-import { advance, continueDecision, describe, ledgerLine, readState, saveState, startPipeline } from '../skills/pipeline/scripts/pipeline.mjs';
+import { advance, autonomyOf, continueDecision, describe, ledgerLine, readState, saveState, startPipeline } from '../skills/pipeline/scripts/pipeline.mjs';
+
+const CLI = fileURLToPath(new URL('../skills/pipeline/scripts/pipeline.mjs', import.meta.url));
+const cli = (root, ...args) => spawnSync('node', [CLI, ...args, '--root', root], { encoding: 'utf8' });
 
 const MANIFEST = {
   pipelines: {
@@ -204,6 +209,57 @@ test('the description names the stage, its agent, and what is missing', () => {
   saveState(root, { ...state, status: 'done' });
   assert.match(describe(root, readState(root, '12'), MANIFEST), /done/);
   assert.match(readFileSync(join(root, 'qa/state/12.pipeline.json'), 'utf8'), /"pipeline": "feature"/);
+});
+
+test('a medium or high risk, in any case of letters, keeps the testware review', () => {
+  for (const level of ['medium', 'Medium', 'HIGH']) {
+    const { root, write } = project({ level });
+    ['basis', 'review', 'register', 'cases', 'plan', 'test', 'run', 'triage'].forEach(write);
+    const { state } = advance(root, startPipeline(root, { pipeline: 'feature', item: '#12', file: '12', now: T0 }, MANIFEST), MANIFEST, at(5));
+    assert.equal(state.stage, 'review', level);
+  }
+});
+
+test('the CLI starts a pipeline, moves it on, reports it, resumes on a second start, and refuses what it cannot use', () => {
+  const { root, write } = project();
+  write('basis');
+  const started = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.equal(started.status, 0, started.stderr);
+  assert.match(started.stdout, /stage analysis \(2 of 7\)/);
+  ['review', 'register', 'cases'].forEach(write);
+  assert.match(cli(root, 'next').stdout, /stage plan/);
+  assert.match(cli(root, 'status').stdout, /#12.*stage plan/);
+  const tried = readState(root, '12');
+  tried.stages.plan.attempts = 2;
+  saveState(root, tried);
+  const again = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.match(again.stdout, /stage plan/, 'a second start resumes the engagement');
+  assert.equal(readState(root, '12').stages.plan.attempts, 2, 'and resets nothing');
+  for (const args of [
+    ['start', 'feature', '--item', '#12 x', '--file', '12'],
+    ['start', 'feature', '--item', '#12', '--file', '../12'],
+    ['start', 'toString', '--item', '#13', '--file', '13'],
+    ['next', '--file', '13'],
+  ]) {
+    assert.equal(cli(root, ...args).status, 2, args.join(' '));
+  }
+});
+
+test('start never restarts a stopped pipeline: a person decides that', () => {
+  const { root } = project();
+  saveState(root, { pipeline: 'feature', item: '#12', file: '12', status: 'stopped', stage: 'analysis', stages: { analysis: { started: T0, attempts: 3, tokens: 0 } }, updated: T0 });
+  const result = cli(root, 'start', 'feature', '--item', '#12', '--file', '12');
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /stopped at stage analysis/);
+  assert.equal(readState(root, '12').stages.analysis.attempts, 3);
+});
+
+test('the autonomy level is read whether or not it is quoted', () => {
+  const { root } = project();
+  for (const value of ['L1', '"L1"', "'L1'"]) {
+    writeFileSync(join(root, 'qa/profile.yaml'), `stack:\n  platforms: [web]\nautonomy: ${value}\n`);
+    assert.equal(autonomyOf(root), 'L1', value);
+  }
 });
 
 test('state is read and written only under qa/state, by a work item file name', () => {

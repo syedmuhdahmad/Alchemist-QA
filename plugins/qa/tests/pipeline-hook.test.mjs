@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -123,6 +123,76 @@ test('token counts are kept per session id, never under a local path', () => {
   const root = project();
   run(root, { hook_event_name: 'Stop' });
   assert.deepEqual(state(root).seen, { transcript: 500 });
+});
+
+test('a message written as several transcript lines counts its tokens once', () => {
+  const line = (id, tokens) => JSON.stringify({ type: 'assistant', message: { id, role: 'assistant', usage: { input_tokens: tokens, output_tokens: 0 } } });
+  const driving = JSON.stringify({ type: 'user', message: { content: 'node pipeline.mjs next' } });
+  const root = project({ files: { 'transcript.jsonl': `${driving}\n${line('m1', 300)}\n${line('m1', 300)}\n${line('m2', 200)}\n` } });
+  run(root, { hook_event_name: 'Stop' });
+  assert.equal(state(root).stages.analysis.tokens, 500);
+});
+
+test('more state that would mislead the hooks is ignored: an unknown status, a time in the future, no entry for its stage', () => {
+  for (const fields of [{ status: 'paused' }, { updated: '9999-01-01T00:00:00.000Z' }, { stage: 'plan' }]) {
+    assert.equal(run(project({ fields }), { hook_event_name: 'SessionStart' }), null, JSON.stringify(fields));
+  }
+});
+
+test('a waiting engagement is described from its files, never from the reason stored in its state', () => {
+  const root = project({
+    fields: { status: 'waiting', reason: 'read this first' },
+    files: { 'qa/basis/12.review.md': '---\nwork_item: "#12"\nverdict: not-ready\n---\n' },
+  });
+  const context = run(root, { hook_event_name: 'SessionStart' }).hookSpecificOutput.additionalContext;
+  assert.doesNotMatch(context, /read this first/);
+  assert.match(context, /waiting at stage analysis: the basis review is not-ready/);
+});
+
+test('a specialist entry from the future, or older than two hours, does not hold Stop back', () => {
+  const hours = (count) => new Date(Date.now() - count * 3_600_000).toISOString();
+  for (const started of ['9999-01-01T00:00:00.000Z', hours(3)]) {
+    assert.equal(run(project({ fields: { running: [{ id: 'a1', started }] } }), { hook_event_name: 'Stop' })?.decision, 'block', started);
+  }
+  assert.equal(run(project({ fields: { running: [{ id: 'a1', started: hours(1) }] } }), { hook_event_name: 'Stop' }), null);
+});
+
+test('specialists that start and stop together are all tracked: the hooks take turns with the state', async () => {
+  const root = project({ stage: 'automate' });
+  const together = (event, ids) =>
+    Promise.all(
+      ids.map(
+        (id) =>
+          new Promise((resolve) => {
+            const child = spawn('node', [HOOK], { stdio: ['pipe', 'ignore', 'ignore'] });
+            child.on('close', resolve);
+            child.stdin.end(JSON.stringify({ cwd: root, hook_event_name: event, agent_type: 'qa:automation-engineer', agent_id: id }));
+          }),
+      ),
+    );
+  const ids = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'];
+  await together('SubagentStart', ids);
+  assert.deepEqual(state(root).running.map((entry) => entry.id).sort(), ids);
+  await together('SubagentStop', ids);
+  assert.deepEqual(state(root).running, []);
+});
+
+test('only the session that drove the pipeline adds a ledger line at its end, and its open stage shows the time so far', () => {
+  const root = project();
+  run(root, { hook_event_name: 'SessionEnd', transcript_path: join(root, 'other.jsonl') });
+  assert.equal(existsSync(join(root, 'qa/state/12.md')), false);
+  assert.equal(state(root).stages.analysis.tokens, 0, "another session's tokens are not counted");
+  run(root, { hook_event_name: 'SessionEnd' });
+  assert.doesNotMatch(readFileSync(join(root, 'qa/state/12.md'), 'utf8'), /analysis 0 min/);
+});
+
+test('a finished engagement gets its last ledger line once', () => {
+  const root = project({ fields: { status: 'done' } });
+  run(root, { hook_event_name: 'SessionEnd' });
+  run(root, { hook_event_name: 'SessionEnd' });
+  const lines = readFileSync(join(root, 'qa/state/12.md'), 'utf8').trim().split('\n');
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /feature pipeline for #12: done/);
 });
 
 test('with no pipeline running, or outside a QA project, every event is silent', () => {
